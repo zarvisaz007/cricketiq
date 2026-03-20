@@ -65,6 +65,7 @@ def parse_match(file_path: Path) -> Optional[dict]:
         "result_margin": result_margin,
         "result_type": result_type,
         "source_file": file_path.name,
+        "gender": info.get("gender", "male"),
     }
 
     # Parse innings → player stats
@@ -164,12 +165,12 @@ def ingest_dataset(dataset_name: str):
             cursor = conn.execute(
                 """INSERT INTO matches
                    (match_type, team1, team2, venue, date, toss_winner, toss_decision,
-                    winner, result_margin, result_type, source_file)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    winner, result_margin, result_type, source_file, gender)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (match["match_type"], match["team1"], match["team2"], match["venue"],
                  match["date"], match["toss_winner"], match["toss_decision"],
                  match["winner"], match["result_margin"], match["result_type"],
-                 match["source_file"])
+                 match["source_file"], match["gender"])
             )
             match_id = cursor.lastrowid
 

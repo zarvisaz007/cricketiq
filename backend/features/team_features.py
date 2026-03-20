@@ -11,15 +11,16 @@ for _p in [_root, os.path.join(_root, "backend")]:
 from database.db import get_connection
 
 
-def get_head_to_head(team1: str, team2: str, match_type: str) -> dict:
+def get_head_to_head(team1: str, team2: str, match_type: str, gender: str = "male") -> dict:
     """Returns head-to-head record between two teams."""
     conn = get_connection()
     rows = conn.execute("""
         SELECT winner FROM matches
         WHERE match_type = ?
+          AND gender = ?
           AND ((team1 = ? AND team2 = ?) OR (team1 = ? AND team2 = ?))
           AND winner IS NOT NULL
-    """, (match_type, team1, team2, team2, team1)).fetchall()
+    """, (match_type, gender, team1, team2, team2, team1)).fetchall()
     conn.close()
 
     total = len(rows)
@@ -34,17 +35,18 @@ def get_head_to_head(team1: str, team2: str, match_type: str) -> dict:
     }
 
 
-def get_team_recent_form(team: str, match_type: str, n: int = 10) -> float:
+def get_team_recent_form(team: str, match_type: str, n: int = 10, gender: str = "male") -> float:
     """Returns team form score (0-100) based on last N matches."""
     conn = get_connection()
     rows = conn.execute("""
         SELECT winner FROM matches
         WHERE match_type = ?
+          AND gender = ?
           AND (team1 = ? OR team2 = ?)
           AND winner IS NOT NULL
         ORDER BY date DESC
         LIMIT ?
-    """, (match_type, team, team, n)).fetchall()
+    """, (match_type, gender, team, team, n)).fetchall()
     conn.close()
 
     if not rows:
@@ -54,16 +56,17 @@ def get_team_recent_form(team: str, match_type: str, n: int = 10) -> float:
     return round(wins / len(rows) * 100, 1)
 
 
-def get_venue_win_rate(team: str, venue: str, match_type: str) -> float:
+def get_venue_win_rate(team: str, venue: str, match_type: str, gender: str = "male") -> float:
     """Returns win rate for a team at a specific venue."""
     conn = get_connection()
     rows = conn.execute("""
         SELECT winner FROM matches
         WHERE match_type = ?
+          AND gender = ?
           AND venue = ?
           AND (team1 = ? OR team2 = ?)
           AND winner IS NOT NULL
-    """, (match_type, venue, team, team)).fetchall()
+    """, (match_type, gender, venue, team, team)).fetchall()
     conn.close()
 
     if not rows:
@@ -73,15 +76,16 @@ def get_venue_win_rate(team: str, venue: str, match_type: str) -> float:
     return round(wins / len(rows) * 100, 1)
 
 
-def get_toss_win_rate(team: str, match_type: str) -> float:
+def get_toss_win_rate(team: str, match_type: str, gender: str = "male") -> float:
     """Returns win rate when team wins toss."""
     conn = get_connection()
     rows = conn.execute("""
         SELECT winner FROM matches
         WHERE match_type = ?
+          AND gender = ?
           AND toss_winner = ?
           AND winner IS NOT NULL
-    """, (match_type, team)).fetchall()
+    """, (match_type, gender, team)).fetchall()
     conn.close()
 
     if not rows:
@@ -110,7 +114,7 @@ def get_team_strength(team: str, match_type: str, venue: str = None) -> float:
           AND pr.player_name IN (
               SELECT DISTINCT player_name FROM player_match_stats pms
               JOIN matches m ON pms.match_id = m.id
-              WHERE m.match_type = ? AND pms.team = ?
+              WHERE m.match_type = ? AND m.gender = 'male' AND pms.team = ?
               ORDER BY m.date DESC LIMIT 200
           )
         ORDER BY overall_rating DESC
@@ -126,16 +130,16 @@ def get_team_strength(team: str, match_type: str, venue: str = None) -> float:
     return round(min(max(strength, 0), 100), 2)
 
 
-def get_team_squad(team: str, match_type: str, last_n_matches: int = 5) -> list:
+def get_team_squad(team: str, match_type: str, last_n_matches: int = 5, gender: str = "male") -> list:
     """Returns the most recent playing XI for a team."""
     conn = get_connection()
     rows = conn.execute("""
         SELECT DISTINCT pms.player_name
         FROM player_match_stats pms
         JOIN matches m ON pms.match_id = m.id
-        WHERE m.match_type = ? AND pms.team = ?
+        WHERE m.match_type = ? AND m.gender = ? AND pms.team = ?
         ORDER BY m.date DESC
         LIMIT ?
-    """, (match_type, team, last_n_matches * 11)).fetchall()
+    """, (match_type, gender, team, last_n_matches * 11)).fetchall()
     conn.close()
     return [r["player_name"] for r in rows]

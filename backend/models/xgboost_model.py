@@ -62,7 +62,7 @@ def train(match_type: str):
     conn = get_connection()
     matches = conn.execute("""
         SELECT team1, team2, venue, toss_winner, winner FROM matches
-        WHERE match_type = ? AND winner IS NOT NULL
+        WHERE match_type = ? AND gender = 'male' AND winner IS NOT NULL
         ORDER BY date ASC
     """, (match_type,)).fetchall()
     conn.close()

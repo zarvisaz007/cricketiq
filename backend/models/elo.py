@@ -89,20 +89,45 @@ def build_elo_from_history(match_type: str):
     """
     Replay all historical matches to build Elo ratings from scratch.
     Ordered by date — oldest first.
+    Uses a single connection and in-memory cache to avoid DB lock contention.
     """
     conn = get_connection()
     matches = conn.execute("""
         SELECT team1, team2, winner FROM matches
-        WHERE match_type = ? AND winner IS NOT NULL
+        WHERE match_type = ? AND gender = 'male' AND winner IS NOT NULL
         ORDER BY date ASC
     """, (match_type,)).fetchall()
-    conn.close()
+
+    # In-memory Elo cache to avoid per-match DB reads
+    elo_cache = {}
+    k = K_FACTORS.get(match_type, 32)
+
+    def cached_elo(team):
+        return elo_cache.get(team, DEFAULT_ELO)
 
     print(f"[Elo] Building from {len(matches)} {match_type} matches...")
     for m in matches:
-        loser = m["team2"] if m["winner"] == m["team1"] else m["team1"]
-        update_after_match(m["winner"], loser, match_type)
+        winner = m["winner"]
+        loser = m["team2"] if winner == m["team1"] else m["team1"]
 
+        w_elo = cached_elo(winner)
+        l_elo = cached_elo(loser)
+        exp_w = _elo_prob(w_elo, l_elo)
+
+        elo_cache[winner] = w_elo + k * (1 - exp_w)
+        elo_cache[loser]  = l_elo + k * (0 - (1 - exp_w))
+
+    # Bulk write final ratings
+    now = datetime.now().isoformat()
+    for team, elo in elo_cache.items():
+        conn.execute("""
+            INSERT INTO elo_ratings (team_name, match_type, elo, last_updated)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(team_name, match_type) DO UPDATE SET elo = excluded.elo, last_updated = excluded.last_updated
+        """, (team, match_type, round(elo, 2), now))
+
+    conn.commit()
+    conn.close()
     print(f"[Elo] Done.")
 
 

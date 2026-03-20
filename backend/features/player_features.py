@@ -26,6 +26,7 @@ def get_batting_stats(player_name: str, match_type: str, last_n: int = None) -> 
         JOIN matches m ON pms.match_id = m.id
         WHERE pms.player_name = ?
           AND m.match_type = ?
+          AND m.gender = 'male'
           AND pms.balls_faced > 0
         ORDER BY m.date DESC
     """
@@ -76,6 +77,7 @@ def get_bowling_stats(player_name: str, match_type: str, last_n: int = None) -> 
         JOIN matches m ON pms.match_id = m.id
         WHERE pms.player_name = ?
           AND m.match_type = ?
+          AND m.gender = 'male'
           AND pms.overs_bowled > 0
         ORDER BY m.date DESC
     """

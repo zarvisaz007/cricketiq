@@ -82,10 +82,12 @@ def compute_bowling_rating(player_name: str, match_type: str) -> float:
 
 
 def compute_overall_rating(batting: float, bowling: float,
-                            batting_innings: int, bowling_matches: int) -> float:
+                            batting_innings: int, bowling_matches: int,
+                            total_wickets: int = 0) -> float:
     """Combine batting and bowling into overall rating."""
     is_batter = batting_innings >= 5
-    is_bowler = bowling_matches >= 5
+    # Require meaningful wickets to avoid dragging specialist batters down
+    is_bowler = bowling_matches >= 10 and total_wickets >= 10
 
     if is_batter and is_bowler:
         return round(batting * 0.5 + bowling * 0.5, 2)
@@ -101,53 +103,144 @@ def _bayesian_smooth(raw: float, n: int) -> float:
     return (raw * n + 50.0 * PRIOR_STRENGTH) / (n + PRIOR_STRENGTH)
 
 
-def update_all_ratings(match_type: str):
-    """Compute and store ratings for all players in the given format."""
-    conn = get_connection()
+def _batting_from_rows(rows: list) -> dict:
+    """Compute batting stats from pre-fetched row dicts."""
+    import numpy as np
+    bat = [r for r in rows if r["balls_faced"] > 0]
+    if not bat:
+        return {"innings": 0, "total_runs": 0, "average": 0, "strike_rate": 0,
+                "dismissals": 0, "std_dev": 0, "highest": 0}
+    total_runs = sum(r["runs"] for r in bat)
+    total_balls = sum(r["balls_faced"] for r in bat)
+    dismissals = sum(r["dismissed"] for r in bat)
+    scores = [r["runs"] for r in bat]
+    return {
+        "innings": len(bat),
+        "total_runs": total_runs,
+        "average": round(total_runs / dismissals if dismissals > 0 else total_runs, 2),
+        "strike_rate": round(total_runs / total_balls * 100 if total_balls > 0 else 0, 2),
+        "dismissals": dismissals,
+        "std_dev": round(float(np.std(scores)) if len(scores) > 1 else 0, 2),
+        "highest": max(scores),
+    }
 
-    players = conn.execute("""
-        SELECT DISTINCT pms.player_name
+
+def _bowling_from_rows(rows: list) -> dict:
+    """Compute bowling stats from pre-fetched row dicts."""
+    bowl = [r for r in rows if r["overs_bowled"] > 0]
+    if not bowl:
+        return {"matches": 0, "total_wickets": 0, "total_overs": 0,
+                "economy": 0, "bowling_average": 0, "bowling_strike_rate": 0}
+    total_overs = sum(r["overs_bowled"] for r in bowl)
+    total_runs = sum(r["runs_conceded"] for r in bowl)
+    total_wickets = sum(r["wickets"] for r in bowl)
+    total_balls = total_overs * 6
+    return {
+        "matches": len(bowl),
+        "total_wickets": total_wickets,
+        "total_overs": round(total_overs, 1),
+        "economy": round(total_runs / total_overs if total_overs > 0 else 0, 2),
+        "bowling_average": round(total_runs / total_wickets if total_wickets > 0 else 999, 2),
+        "bowling_strike_rate": round(total_balls / total_wickets if total_wickets > 0 else 999, 2),
+    }
+
+
+def _form_from_rows(bat_rows: list, bowl_rows: list) -> float:
+    """Compute form score from last-N rows."""
+    bat = _batting_from_rows(bat_rows)
+    bowl = _bowling_from_rows(bowl_rows)
+    score = 50.0
+    if bat["innings"] > 0:
+        avg_score = min(bat["average"] / 50 * 70, 100)
+        sr_score = min(bat["strike_rate"] / 150 * 70, 100)
+        score = avg_score * 0.5 + sr_score * 0.5
+    elif bowl["matches"] > 0:
+        econ_score = max(0, 100 - bowl["economy"] * 8)
+        wick_score = min(bowl["total_wickets"] / bowl["matches"] * 40, 100)
+        score = econ_score * 0.5 + wick_score * 0.5
+    return round(min(max(score, 0), 100), 2)
+
+
+def _batting_rating_from_stats(b_stats: dict, form: float) -> float:
+    if b_stats["innings"] < 3:
+        return _bayesian_smooth(50.0, b_stats["innings"])
+    avg_score = _normalize(b_stats["average"], 0, 60)
+    sr_score = _normalize(b_stats["strike_rate"], 60, 200)
+    consistency = _normalize(max(0, 100 - b_stats["std_dev"]), 0, 100)
+    raw = avg_score * 0.40 + sr_score * 0.30 + form * 0.20 + consistency * 0.10
+    return round(_bayesian_smooth(raw, b_stats["innings"]), 2)
+
+
+def _bowling_rating_from_stats(bw_stats: dict, form: float) -> float:
+    if bw_stats["matches"] < 3 or bw_stats["total_wickets"] < 2:
+        return _bayesian_smooth(50.0, bw_stats["matches"])
+    econ_score = _normalize(max(0, 15 - bw_stats["economy"]), 0, 10)
+    bsr_score = _normalize(max(0, 50 - bw_stats["bowling_strike_rate"]), 0, 40)
+    bavg_score = _normalize(max(0, 80 - bw_stats["bowling_average"]), 0, 70)
+    raw = econ_score * 0.35 + bsr_score * 0.30 + bavg_score * 0.20 + form * 0.15
+    return round(_bayesian_smooth(raw, bw_stats["matches"]), 2)
+
+
+def update_all_ratings(match_type: str):
+    """Compute and store ratings for all players in the given format.
+    Batch version: loads all data in one query to avoid N+1 DB round-trips.
+    """
+    from collections import defaultdict
+
+    conn = get_connection()
+    rows = conn.execute("""
+        SELECT pms.player_name,
+               pms.runs, pms.balls_faced, pms.dismissed,
+               pms.overs_bowled, pms.runs_conceded, pms.wickets, pms.dot_balls,
+               m.date
         FROM player_match_stats pms
         JOIN matches m ON pms.match_id = m.id
         WHERE m.match_type = ?
+          AND m.gender = 'male'
+        ORDER BY pms.player_name, m.date DESC
     """, (match_type,)).fetchall()
     conn.close()
 
-    print(f"[Ratings/{match_type}] Computing for {len(players)} players...")
+    # Group rows by player (already ordered by date DESC per player)
+    player_rows = defaultdict(list)
+    for r in rows:
+        player_rows[r["player_name"]].append(dict(r))
+
+    print(f"[Ratings/{match_type}] Computing for {len(player_rows)} players...")
+
+    records = []
+    now = datetime.now().isoformat()
+    for name, prows in player_rows.items():
+        b_stats = _batting_from_rows(prows)
+        bw_stats = _bowling_from_rows(prows)
+        form = _form_from_rows(prows[:10], prows[:10])
+        batting = _batting_rating_from_stats(b_stats, form)
+        bowling = _bowling_rating_from_stats(bw_stats, form)
+        overall = compute_overall_rating(batting, bowling, b_stats["innings"], bw_stats["matches"],
+                                          total_wickets=bw_stats["total_wickets"])
+        consistency = max(0, 100 - b_stats["std_dev"])
+        games_played = b_stats["innings"] + bw_stats["matches"]
+        records.append((name, match_type, batting, bowling, overall, form,
+                        consistency, games_played, now))
 
     conn = get_connection()
-    updated = 0
-    for row in players:
-        name = row["player_name"]
-        batting = compute_batting_rating(name, match_type)
-        bowling = compute_bowling_rating(name, match_type)
-
-        b_stats = get_batting_stats(name, match_type)
-        bw_stats = get_bowling_stats(name, match_type)
-        overall = compute_overall_rating(batting, bowling, b_stats["innings"], bw_stats["matches"])
-        form = get_recent_form(name, match_type)
-
-        conn.execute("""
-            INSERT INTO player_ratings
-                (player_name, match_type, batting_rating, bowling_rating, overall_rating,
-                 form_score, consistency, games_played, last_updated)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(player_name, match_type) DO UPDATE SET
-                batting_rating = excluded.batting_rating,
-                bowling_rating = excluded.bowling_rating,
-                overall_rating = excluded.overall_rating,
-                form_score = excluded.form_score,
-                games_played = excluded.games_played,
-                last_updated = excluded.last_updated
-        """, (name, match_type, batting, bowling, overall, form,
-              max(0, 100 - get_batting_stats(name, match_type)["std_dev"]),
-              b_stats["innings"] + bw_stats["matches"],
-              datetime.now().isoformat()))
-        updated += 1
-
+    conn.executemany("""
+        INSERT INTO player_ratings
+            (player_name, match_type, batting_rating, bowling_rating, overall_rating,
+             form_score, consistency, games_played, last_updated)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(player_name, match_type) DO UPDATE SET
+            batting_rating = excluded.batting_rating,
+            bowling_rating = excluded.bowling_rating,
+            overall_rating = excluded.overall_rating,
+            form_score = excluded.form_score,
+            consistency = excluded.consistency,
+            games_played = excluded.games_played,
+            last_updated = excluded.last_updated
+    """, records)
     conn.commit()
     conn.close()
-    print(f"[Ratings/{match_type}] Updated {updated} player ratings.")
+    print(f"[Ratings/{match_type}] Updated {len(records)} player ratings.")
 
 
 def get_player_rating(player_name: str, match_type: str) -> dict:

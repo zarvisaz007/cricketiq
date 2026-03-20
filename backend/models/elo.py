@@ -90,13 +90,21 @@ def build_elo_from_history(match_type: str):
     Replay all historical matches to build Elo ratings from scratch.
     Ordered by date — oldest first.
     Uses a single connection and in-memory cache to avoid DB lock contention.
+    Only uses T20I/ODI international matches (excludes IPL and women's matches).
     """
+    # Map match_type to competition code so IPL T20s are excluded
+    competition = "T20I" if match_type == "T20" else match_type
     conn = get_connection()
+
+    # Clear existing Elo for this format before rebuilding to remove stale rows
+    conn.execute("DELETE FROM elo_ratings WHERE match_type = ?", (match_type,))
+    conn.commit()
+
     matches = conn.execute("""
         SELECT team1, team2, winner FROM matches
-        WHERE match_type = ? AND gender = 'male' AND winner IS NOT NULL
+        WHERE match_type = ? AND competition = ? AND gender = 'male' AND winner IS NOT NULL
         ORDER BY date ASC
-    """, (match_type,)).fetchall()
+    """, (match_type, competition)).fetchall()
 
     # In-memory Elo cache to avoid per-match DB reads
     elo_cache = {}

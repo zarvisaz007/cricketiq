@@ -23,6 +23,11 @@ from data.normalization import normalize_team, normalize_player, normalize_venue
 
 RAW_DATA_PATH = Path("data/raw")
 
+_FOLDER_TO_COMPETITION = {"ipl": "IPL", "t20s": "T20I", "odis": "ODI"}
+
+def _folder_to_competition(folder_name: str) -> str:
+    return _FOLDER_TO_COMPETITION.get(folder_name.lower(), folder_name.upper())
+
 
 # ─── Parser ────────────────────────────────────────────────────────────────────
 
@@ -66,6 +71,7 @@ def parse_match(file_path: Path) -> Optional[dict]:
         "result_type": result_type,
         "source_file": file_path.name,
         "gender": info.get("gender", "male"),
+        "competition": _folder_to_competition(file_path.parent.name),
     }
 
     # Parse innings → player stats
@@ -165,12 +171,12 @@ def ingest_dataset(dataset_name: str):
             cursor = conn.execute(
                 """INSERT INTO matches
                    (match_type, team1, team2, venue, date, toss_winner, toss_decision,
-                    winner, result_margin, result_type, source_file, gender)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    winner, result_margin, result_type, source_file, gender, competition)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (match["match_type"], match["team1"], match["team2"], match["venue"],
                  match["date"], match["toss_winner"], match["toss_decision"],
                  match["winner"], match["result_margin"], match["result_type"],
-                 match["source_file"], match["gender"])
+                 match["source_file"], match["gender"], match["competition"])
             )
             match_id = cursor.lastrowid
 

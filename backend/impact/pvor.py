@@ -16,8 +16,42 @@ for _p in [_root, os.path.join(_root, "backend")]:
     if _p not in sys.path: sys.path.insert(0, _p)
 
 from simulation.monte_carlo import simulate_match, simulate_without_player
+from features.team_features import get_team_squad
 
 N_WITH = 1000    # simulations for "with player" scenario
+
+
+def _resolve_player_name(player_name: str, team: str, match_type: str) -> str:
+    """
+    Resolve player name to the exact Cricsheet format by matching against
+    the team's recent squad. Falls back to original input if no match found.
+    Handles cases like 'Jasprit Bumrah' → 'JJ Bumrah'.
+    """
+    squad = get_team_squad(team, match_type, last_n_matches=20)
+    name_lower = player_name.lower()
+
+    # Exact match first
+    if player_name in squad:
+        return player_name
+
+    # Try last name match
+    last_name = player_name.split()[-1].lower()
+    candidates = [p for p in squad if last_name in p.lower()]
+    if len(candidates) == 1:
+        return candidates[0]
+
+    # Try first name / initials match
+    first_word = player_name.split()[0].lower()
+    candidates = [p for p in squad if first_word in p.lower()]
+    if len(candidates) == 1:
+        return candidates[0]
+
+    # Try full substring match
+    candidates = [p for p in squad if name_lower in p.lower() or p.lower() in name_lower]
+    if len(candidates) == 1:
+        return candidates[0]
+
+    return player_name  # fallback to original
 N_WITHOUT = 1000  # simulations for "without player" scenario
 
 
@@ -36,12 +70,17 @@ def compute_pvor(player_name: str, team: str, opponent: str, match_type: str) ->
             "impact_label": "High"
         }
     """
+    # Resolve player name to Cricsheet format
+    resolved_name = _resolve_player_name(player_name, team, match_type)
+    if resolved_name != player_name:
+        print(f"  [PVOR] Resolved '{player_name}' → '{resolved_name}'")
+
     # P(win with player) — normal simulation
     with_result = simulate_match(team, opponent, match_type, n_simulations=N_WITH)
     win_with = with_result["team1_win_pct"]
 
     # P(win without player) — squad minus this player
-    win_without = simulate_without_player(player_name, team, opponent, match_type, n=N_WITHOUT)
+    win_without = simulate_without_player(resolved_name, team, opponent, match_type, n=N_WITHOUT)
 
     pvor = round(win_with - win_without, 2)
 
@@ -57,7 +96,7 @@ def compute_pvor(player_name: str, team: str, opponent: str, match_type: str) ->
         impact_label = "Negative"
 
     return {
-        "player": player_name,
+        "player": resolved_name,
         "team": team,
         "opponent": opponent,
         "win_with": win_with,

@@ -50,7 +50,8 @@ def init_db():
             result_margin   INTEGER,
             result_type     TEXT,
             source_file     TEXT UNIQUE,
-            gender          TEXT DEFAULT 'male'
+            gender          TEXT DEFAULT 'male',
+            competition     TEXT
         );
 
         -- Per-match player stats (raw from Cricsheet)

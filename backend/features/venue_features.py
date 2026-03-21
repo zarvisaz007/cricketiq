@@ -5,6 +5,7 @@ Reads from the venues table seeded with pitch characteristics.
 """
 import sys
 import os
+from functools import lru_cache
 _root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 for _p in [_root, os.path.join(_root, "backend")]:
     if _p not in sys.path: sys.path.insert(0, _p)
@@ -36,6 +37,7 @@ def _fuzzy_match_venue(venue_name: str, conn) -> dict:
     return None
 
 
+@lru_cache(maxsize=512)
 def get_venue_factors(venue_name: str) -> dict:
     """
     Returns pitch characteristics for a venue.
@@ -69,6 +71,7 @@ def get_venue_factors(venue_name: str) -> dict:
     }
 
 
+@lru_cache(maxsize=2048)
 def get_home_advantage(team: str, venue_name: str, match_type: str) -> float:
     """
     Returns home advantage score (0-100).

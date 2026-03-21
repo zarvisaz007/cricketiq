@@ -52,7 +52,10 @@ def train(match_type: str):
     print(f"[XGB/{match_type}] Building {len(FEATURE_COLS)} features for {len(matches)} matches...")
 
     X, y = [], []
-    for m in matches:
+    total = len(matches)
+    for idx, m in enumerate(matches):
+        if (idx + 1) % 500 == 0 or idx == 0:
+            print(f"  ... {idx+1}/{total} feature vectors built", flush=True)
         try:
             features = _build_features(m["team1"], m["team2"], m["venue"],
                                         match_type, m["toss_winner"])

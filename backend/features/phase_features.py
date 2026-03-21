@@ -5,6 +5,7 @@ Computes phase-specific run rates, economy, wicket rates from deliveries table.
 """
 import sys
 import os
+from functools import lru_cache
 _root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 for _p in [_root, os.path.join(_root, "backend")]:
     if _p not in sys.path: sys.path.insert(0, _p)
@@ -19,6 +20,7 @@ PHASES = {
 }
 
 
+@lru_cache(maxsize=2048)
 def _get_team_phase_stats(team: str, match_type: str, phase: str,
                           last_n_matches: int = 10) -> dict:
     """
@@ -80,6 +82,7 @@ def get_phase_wicket_rate(team: str, match_type: str, phase: str,
     return round(stats["wickets"] / overs, 2) if overs > 0 else 0.0
 
 
+@lru_cache(maxsize=2048)
 def _get_bowling_phase_stats(team: str, match_type: str, phase: str,
                              last_n_matches: int = 10) -> dict:
     """Get bowling stats for a team (when they bowl) in a phase."""

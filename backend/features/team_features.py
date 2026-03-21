@@ -4,6 +4,7 @@ Computes team-level features for prediction models.
 """
 import sys
 import os
+from functools import lru_cache
 _root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 for _p in [_root, os.path.join(_root, "backend")]:
     if _p not in sys.path: sys.path.insert(0, _p)
@@ -11,6 +12,7 @@ for _p in [_root, os.path.join(_root, "backend")]:
 from database.db import get_connection
 
 
+@lru_cache(maxsize=2048)
 def get_head_to_head(team1: str, team2: str, match_type: str, gender: str = "male") -> dict:
     """
     Returns head-to-head record between two teams.
@@ -63,6 +65,7 @@ def get_head_to_head(team1: str, team2: str, match_type: str, gender: str = "mal
     }
 
 
+@lru_cache(maxsize=2048)
 def get_team_recent_form(team: str, match_type: str, n: int = 10, gender: str = "male") -> float:
     """
     Returns team form score (0-100) based on last N matches.
@@ -96,6 +99,7 @@ def get_team_recent_form(team: str, match_type: str, n: int = 10, gender: str = 
     return round(weighted_wins / total_weight * 100, 1) if total_weight > 0 else 50.0
 
 
+@lru_cache(maxsize=2048)
 def get_venue_win_rate(team: str, venue: str, match_type: str, gender: str = "male") -> float:
     """Returns win rate for a team at a specific venue."""
     conn = get_connection()
@@ -135,6 +139,7 @@ def get_toss_win_rate(team: str, match_type: str, gender: str = "male") -> float
     return round(wins / len(rows) * 100, 1)
 
 
+@lru_cache(maxsize=2048)
 def get_team_strength(team: str, match_type: str, venue: str = None) -> float:
     """
     Composite team strength score (0-100).

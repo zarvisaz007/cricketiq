@@ -79,13 +79,27 @@ PIPELINE = [
         "id": "install",
         "label": "Install Dependencies",
         "cmd": ["pip3", "install", "-r", "requirements.txt"],
-        "phase": None,  # always run
+        "phase": None,
     },
     {
         "id": "db",
         "label": "Initialize Database",
         "cmd": ["python3", "scripts/setup_db.py"],
         "phase": None,
+    },
+    {
+        "id": "migrate",
+        "label": "Run v2 Schema Migration",
+        "cmd": ["python3", "database/migrations/001_schema_v2.py"],
+        "phase": None,
+        "depends_on": "db",
+    },
+    {
+        "id": "seed_venues",
+        "label": "Seed Venue Data",
+        "cmd": ["python3", "database/seed_venues.py"],
+        "phase": None,
+        "depends_on": "migrate",
     },
     {
         "id": "download",
@@ -113,6 +127,13 @@ PIPELINE = [
         "cmd": ["python3", "backend/models/train_all.py"],
         "phase": "Phase 3",
         "depends_on": "ratings",
+    },
+    {
+        "id": "train_ipl",
+        "label": "Train IPL Model",
+        "cmd": ["python3", "backend/models/ipl_predictor.py"],
+        "phase": "Phase 4",
+        "depends_on": "train",
     },
 ]
 

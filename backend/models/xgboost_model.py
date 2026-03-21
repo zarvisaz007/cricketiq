@@ -1,7 +1,7 @@
 """
 models/xgboost_model.py
-XGBoost match prediction model (most accurate).
-Uses same feature set as logistic model + additional features.
+XGBoost match prediction model v2.
+Uses feature registry (28 features), TimeSeriesSplit, logs model records.
 """
 import sys
 import os
@@ -13,51 +13,29 @@ for _p in [_root, os.path.join(_root, "backend")]:
     if _p not in sys.path: sys.path.insert(0, _p)
 
 from database.db import get_connection
-from models.elo import get_elo, _elo_prob
-from features.team_features import (get_team_strength, get_venue_win_rate,
-                                     get_team_recent_form, get_head_to_head)
+from features.feature_registry import (build_feature_vector, feature_vector_to_list,
+                                        FEATURE_COLS, FEATURE_DEFAULTS)
 
 MODEL_PATH = Path("models/xgb_{match_type}.pkl")
 
 
 def _build_features(team1: str, team2: str, venue: str, match_type: str,
                     toss_winner: str = None) -> list:
-    """Extended feature vector for XGBoost."""
-    strength1 = get_team_strength(team1, match_type, venue)
-    strength2 = get_team_strength(team2, match_type, venue)
-    elo1 = get_elo(team1, match_type)
-    elo2 = get_elo(team2, match_type)
-    form1 = get_team_recent_form(team1, match_type)
-    form2 = get_team_recent_form(team2, match_type)
-    venue_adv1 = get_venue_win_rate(team1, venue, match_type) if venue else 50.0
-    venue_adv2 = get_venue_win_rate(team2, venue, match_type) if venue else 50.0
-    h2h = get_head_to_head(team1, team2, match_type)
-    toss_adv = 1.0 if toss_winner == team1 else (0.0 if toss_winner == team2 else 0.5)
-
-    return [
-        strength1 - strength2,
-        _elo_prob(elo1, elo2),
-        elo1 - elo2,
-        form1 - form2,
-        venue_adv1 - venue_adv2,
-        toss_adv,
-        h2h["team1_win_pct"] / 100.0,
-        strength1 / 100.0,
-        strength2 / 100.0,
-        form1 / 100.0,
-        form2 / 100.0,
-    ]
+    """Build feature vector using the feature registry."""
+    fv = build_feature_vector(team1, team2, venue, match_type, toss_winner,
+                              include_phases=(match_type == "T20"))
+    return feature_vector_to_list(fv)
 
 
 def train(match_type: str):
-    """Train XGBoost on historical data."""
+    """Train XGBoost on historical data with TimeSeriesSplit."""
     try:
         import xgboost as xgb
     except ImportError:
         print("[XGB] xgboost not installed. Run: pip install xgboost")
         return None
 
-    from sklearn.model_selection import train_test_split
+    from sklearn.model_selection import TimeSeriesSplit
 
     conn = get_connection()
     matches = conn.execute("""
@@ -71,7 +49,7 @@ def train(match_type: str):
         print(f"[XGB/{match_type}] Not enough data ({len(matches)} matches). Need 100+.")
         return None
 
-    print(f"[XGB/{match_type}] Building features for {len(matches)} matches...")
+    print(f"[XGB/{match_type}] Building {len(FEATURE_COLS)} features for {len(matches)} matches...")
 
     X, y = [], []
     for m in matches:
@@ -87,29 +65,72 @@ def train(match_type: str):
     X = np.array(X)
     y = np.array(y)
 
-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2,
-                                                        random_state=42, shuffle=False)
+    # TimeSeriesSplit — prevents lookahead bias
+    tscv = TimeSeriesSplit(n_splits=5)
+    val_accuracies = []
+    brier_scores = []
 
-    model = xgb.XGBClassifier(
-        n_estimators=200,
-        max_depth=4,
+    for train_idx, val_idx in tscv.split(X):
+        X_train, X_val = X[train_idx], X[val_idx]
+        y_train, y_val = y[train_idx], y[val_idx]
+
+        model = xgb.XGBClassifier(
+            n_estimators=300,
+            max_depth=5,
+            learning_rate=0.05,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            min_child_weight=3,
+            reg_alpha=0.1,
+            reg_lambda=1.0,
+            eval_metric="logloss",
+            random_state=42,
+            verbosity=0,
+        )
+        model.fit(X_train, y_train,
+                  eval_set=[(X_val, y_val)],
+                  verbose=False)
+
+        val_pred = model.predict(X_val)
+        val_prob = model.predict_proba(X_val)[:, 1]
+        val_acc = (val_pred == y_val).mean()
+        brier = float(np.mean((val_prob - y_val) ** 2))
+        val_accuracies.append(val_acc)
+        brier_scores.append(brier)
+
+    # Train final model on all data
+    final_model = xgb.XGBClassifier(
+        n_estimators=300,
+        max_depth=5,
         learning_rate=0.05,
         subsample=0.8,
         colsample_bytree=0.8,
+        min_child_weight=3,
+        reg_alpha=0.1,
+        reg_lambda=1.0,
         eval_metric="logloss",
         random_state=42,
         verbosity=0,
     )
-    model.fit(X_train, y_train,
-              eval_set=[(X_val, y_val)],
-              verbose=False)
+    final_model.fit(X, y, verbose=False)
 
     path = str(MODEL_PATH).format(match_type=match_type)
-    joblib.dump(model, path)
+    joblib.dump(final_model, path)
 
-    val_acc = (model.predict(X_val) == y_val).mean()
-    print(f"[XGB/{match_type}] Trained. Val accuracy: {val_acc:.2%} | Saved to {path}")
-    return model
+    avg_acc = np.mean(val_accuracies)
+    avg_brier = np.mean(brier_scores)
+    print(f"[XGB/{match_type}] CV accuracy: {avg_acc:.2%} (Brier: {avg_brier:.4f}) | Saved to {path}")
+
+    # Log model record
+    try:
+        from models.prediction_tracker import log_model_record
+        log_model_record("xgboost", match_type, avg_acc, len(X),
+                         feature_count=len(FEATURE_COLS), brier_score=avg_brier,
+                         model_path=path)
+    except Exception:
+        pass
+
+    return final_model
 
 
 def predict(team1: str, team2: str, venue: str, match_type: str,

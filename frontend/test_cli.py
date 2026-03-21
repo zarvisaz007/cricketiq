@@ -797,6 +797,292 @@ def run_elo_rankings():
     print(tabulate(table, headers=["#", "Team", "Elo", ""], tablefmt="simple"))
 
 
+# ─── Feature 9: Live Scores ───────────────────────────────
+
+def run_live_scores():
+    header("LIVE SCORES")
+    print("  Fetching live matches from Cricbuzz...")
+
+    try:
+        from scrapers.cricbuzz_live import get_live_matches, fetch_live_scorecard
+    except ImportError:
+        print("  [Error] Scrapers not available. Install: pip install beautifulsoup4 lxml")
+        return
+
+    matches = get_live_matches()
+    if not matches:
+        # Try cached matches
+        try:
+            from scrapers.live_poller import get_cached_live_matches
+            matches = get_cached_live_matches()
+            if matches:
+                section("CACHED LIVE MATCHES")
+                for m in matches:
+                    print(f"  {m.get('team1', '?')} vs {m.get('team2', '?')}")
+                    print(f"    {m.get('score_summary', 'No score data')}")
+                    print(f"    Status: {m.get('status', '?')} | Last update: {m.get('last_polled', '?')}")
+                    print()
+                return
+        except Exception:
+            pass
+        print("  No live matches found.")
+        return
+
+    section(f"LIVE MATCHES ({len(matches)} found)")
+    for i, m in enumerate(matches, 1):
+        print(f"  {i}. {m.get('team_a', '?')} vs {m.get('team_b', '?')}  ({m.get('match_type', 'T20')})")
+
+    choice = input("\n  Select match for scorecard (or Enter to skip): ").strip()
+    if choice:
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(matches):
+                match = matches[idx]
+                print(f"\n  Fetching scorecard for {match['team_a']} vs {match['team_b']}...")
+                scorecard = fetch_live_scorecard(match["cricbuzz_id"])
+                if scorecard:
+                    section("LIVE SCORECARD")
+                    print(f"  Status: {scorecard.get('status', 'live')}")
+                    for inn in scorecard.get("innings", []):
+                        team = inn.get("batting_team", "?")
+                        runs = inn.get("total_runs", 0)
+                        wkts = inn.get("total_wickets", 0)
+                        overs = inn.get("total_overs", 0)
+                        print(f"  {team}: {runs}/{wkts} ({overs} ov)")
+
+                        # Current batsmen
+                        for bat in inn.get("current_batsmen", []):
+                            if bat.get("name"):
+                                print(f"    {bat['name']}: {bat.get('runs', 0)}({bat.get('balls', 0)})")
+
+                        bowler = inn.get("current_bowler", {})
+                        if bowler.get("name"):
+                            print(f"    Bowling: {bowler['name']} {bowler.get('overs',0)}-0-{bowler.get('runs',0)}-{bowler.get('wickets',0)}")
+                else:
+                    print("  Could not fetch scorecard.")
+        except (ValueError, IndexError):
+            print("  Invalid selection.")
+
+
+# ─── Feature 10: IPL Zone ─────────────────────────────────
+
+def run_ipl_zone():
+    header("IPL ZONE")
+
+    ipl_menu = {
+        "1": "IPL Match Prediction",
+        "2": "Points Table",
+        "3": "Playoff Probabilities",
+        "4": "IPL Team Rankings",
+        "5": "Back to Main Menu",
+    }
+
+    while True:
+        section("IPL MENU")
+        for k, v in ipl_menu.items():
+            print(f"    {k}.  {v}")
+
+        choice = input("\n  Select: ").strip()
+
+        if choice == "5":
+            return
+
+        elif choice == "1":
+            # IPL Prediction
+            from features.ipl_season import get_ipl_teams
+            teams = get_ipl_teams()
+            if not teams:
+                print("  No IPL data found.")
+                continue
+
+            print("\n  IPL Teams:")
+            for i, t in enumerate(teams, 1):
+                print(f"    {i}. {t}")
+
+            try:
+                t1_idx = int(input("\n  Team 1: ").strip()) - 1
+                t2_idx = int(input("  Team 2: ").strip()) - 1
+                team1 = teams[t1_idx]
+                team2 = teams[t2_idx]
+            except (ValueError, IndexError):
+                print("  Invalid selection.")
+                continue
+
+            venue = input("  Venue (Enter to skip): ").strip() or None
+
+            print(f"\n  Predicting: {team1} vs {team2}...")
+            from models.ipl_predictor import predict as ipl_predict
+            prob = ipl_predict(team1, team2, venue) * 100
+
+            section("IPL PREDICTION")
+            print(f"  {team1:<30}  {prob:.1f}%")
+            print(f"  {team2:<30}  {100-prob:.1f}%")
+
+            from features.ipl_features import get_ipl_h2h, get_ipl_team_form
+            h2h = get_ipl_h2h(team1, team2)
+            f1 = get_ipl_team_form(team1)
+            f2 = get_ipl_team_form(team2)
+
+            section("IPL CONTEXT")
+            print(f"  H2H in IPL: {team1} {h2h['team1_wins']}-{h2h['team2_wins']} {team2} ({h2h['total']} matches)")
+            print(f"  IPL Form: {team1} {f1:.0f}% | {team2} {f2:.0f}%")
+            if venue:
+                from features.ipl_features import is_home_match
+                home = team1 if is_home_match(team1, venue) else (team2 if is_home_match(team2, venue) else "Neutral")
+                print(f"  Home advantage: {home}")
+
+        elif choice == "2":
+            from features.ipl_season import get_points_table
+            from tabulate import tabulate
+
+            season = input("  Season (Enter for latest): ").strip() or None
+            table = get_points_table(season)
+            if not table:
+                print("  No data found.")
+                continue
+
+            section("IPL POINTS TABLE")
+            rows = [[t["position"], t["team"], t["played"], t["won"], t["lost"],
+                     t["no_result"], t["points"], f"{t['win_pct']:.1f}%"]
+                    for t in table]
+            print(tabulate(rows,
+                           headers=["#", "Team", "P", "W", "L", "NR", "Pts", "Win%"],
+                           tablefmt="simple"))
+
+        elif choice == "3":
+            from features.ipl_season import simulate_playoff_probabilities
+            from tabulate import tabulate
+
+            print("  Running playoff simulations (5000 iterations)...")
+            results = simulate_playoff_probabilities()
+            if not results:
+                print("  No data found.")
+                continue
+
+            section("PLAYOFF PROBABILITIES")
+            rows = [[r["team"], r["current_points"], r["played"],
+                     f"{r['won']}-{r['lost']}", f"{r['playoff_prob']:.1f}%",
+                     "█" * int(r["playoff_prob"] / 5)]
+                    for r in results]
+            print(tabulate(rows,
+                           headers=["Team", "Pts", "P", "W-L", "Playoff%", ""],
+                           tablefmt="simple"))
+
+        elif choice == "4":
+            from features.ipl_features import get_franchise_strength
+            from features.ipl_season import get_ipl_teams
+            from tabulate import tabulate
+
+            teams = get_ipl_teams()
+            if not teams:
+                print("  No IPL data found.")
+                continue
+
+            rankings = []
+            for t in teams:
+                strength = get_franchise_strength(t)
+                rankings.append({"team": t, "strength": strength})
+            rankings.sort(key=lambda x: -x["strength"])
+
+            section("IPL TEAM RANKINGS")
+            rows = [[i, r["team"], f"{r['strength']:.1f}",
+                     "█" * int(r["strength"] / 5)]
+                    for i, r in enumerate(rankings, 1)]
+            print(tabulate(rows, headers=["#", "Team", "Strength", ""], tablefmt="simple"))
+
+
+# ─── Feature 11: Dream11 Fantasy Team Builder ─────────────
+
+def run_dream11():
+    header("DREAM11 FANTASY TEAM BUILDER")
+    match_type = select_match_type()
+    team1 = select_team(match_type, "Select Team 1")
+    team2 = select_team(match_type, "Select Team 2")
+    venue = input("\n  Venue (Enter to skip): ").strip() or None
+
+    print(f"\n  Building optimal Dream11 team for {team1} vs {team2}...")
+    print("  (Analyzing player stats, expected points, credit values...)")
+
+    from fantasy.team_selector import select_dream11_team
+    from tabulate import tabulate
+
+    result = select_dream11_team(team1, team2, match_type, venue)
+    team = result["team"]
+
+    if not team:
+        print("  Could not build team. Insufficient player data.")
+        return
+
+    section(f"DREAM11 XI — {team1} vs {team2}")
+
+    # Group by role
+    rows = []
+    for i, p in enumerate(team, 1):
+        tag = ""
+        if p["player"] == result["captain"]:
+            tag = " (C)"
+        elif p["player"] == result["vice_captain"]:
+            tag = " (VC)"
+
+        rows.append([
+            i, p["player"] + tag, p["team"][:3].upper(),
+            p["d11_role"], f"{p['credit']:.1f}",
+            f"{p['expected_points']:.1f}",
+            f"{p.get('consistency', 0):.0f}%",
+        ])
+
+    print(tabulate(rows,
+                   headers=["#", "Player", "Team", "Role", "Credits", "Exp Pts", "Consistency"],
+                   tablefmt="simple"))
+
+    separator()
+    print(f"  Captain:       {result['captain']} (2x points)")
+    print(f"  Vice-Captain:  {result['vice_captain']} (1.5x points)")
+    print(f"  Total Credits: {result['total_credits']:.1f} / 100.0")
+    print(f"  Expected Pts:  {result['total_expected_points']:.1f}")
+    print(f"  Method:        {result.get('method', 'unknown')}")
+    print(f"  Valid Team:    {'Yes' if result['constraints_met'] else 'No — constraints not met'}")
+
+
+# ─── Feature 12: Prediction Accuracy Report ───────────────
+
+def run_accuracy_report():
+    header("PREDICTION ACCURACY REPORT")
+
+    from models.prediction_tracker import get_accuracy_report, backfill_outcomes
+    from tabulate import tabulate
+
+    print("  Backfilling outcomes...")
+    backfill_outcomes()
+
+    match_type = input("\n  Filter by format (T20/ODI/Enter for all): ").strip() or None
+    report = get_accuracy_report(match_type)
+
+    if report["total_predictions"] == 0:
+        print("\n  No tracked predictions yet. Predictions will be logged as you use the tool.")
+        return
+
+    section("OVERALL ACCURACY")
+    print(f"  Total predictions: {report['total_predictions']}")
+    print(f"  Correct:           {report['correct']}")
+    print(f"  Accuracy:          {report['accuracy']:.1f}%")
+
+    if report["per_model"]:
+        section("PER-MODEL ACCURACY")
+        rows = [[m["model"], m["total"], f"{m['accuracy']:.1f}%",
+                 f"{m['brier']:.4f}" if m["brier"] else "-"]
+                for m in report["per_model"]]
+        print(tabulate(rows, headers=["Model", "Predictions", "Accuracy", "Brier"],
+                       tablefmt="simple"))
+
+    if report["calibration"]:
+        section("CALIBRATION")
+        rows = [[b["range"], f"{b['predicted']:.1%}", f"{b['actual']:.1%}", b["count"]]
+                for b in report["calibration"]]
+        print(tabulate(rows, headers=["Bin", "Predicted", "Actual", "Count"],
+                       tablefmt="simple"))
+
+
 # ─── Main Menu ─────────────────────────────────────────────
 
 def main():
@@ -807,18 +1093,22 @@ def main():
     print("  ██║     ██╔══██╗██║██║     ██╔═██╗ ██╔══╝     ██║   ██║██║▄▄ ██║")
     print("  ╚██████╗██║  ██║██║╚██████╗██║  ██╗███████╗   ██║   ██║╚██████╔╝")
     print("   ╚═════╝╚═╝  ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝ ╚══▀▀═╝ ")
-    print("                   Cricket Prediction Engine — MVP v2")
+    print("                   Cricket Prediction Engine — v2")
 
     menu = {
-        "1": ("Match Prediction",      run_match_prediction),
-        "2": ("Player Profile",        run_player_rating),
-        "3": ("Player PVOR Impact",    run_pvor),
-        "4": ("Player Analysis Report",run_player_report),
-        "5": ("Team Analysis",         run_team_analysis),
-        "6": ("Top Players",           run_top_players),
-        "7": ("Smart Alerts",          run_smart_alerts),
-        "8": ("Elo Rankings",          run_elo_rankings),
-        "0": ("Exit",                  None),
+        "1":  ("Match Prediction",       run_match_prediction),
+        "2":  ("Player Profile",         run_player_rating),
+        "3":  ("Player PVOR Impact",     run_pvor),
+        "4":  ("Player Analysis Report", run_player_report),
+        "5":  ("Team Analysis",          run_team_analysis),
+        "6":  ("Top Players",            run_top_players),
+        "7":  ("Smart Alerts",           run_smart_alerts),
+        "8":  ("Elo Rankings",           run_elo_rankings),
+        "9":  ("Live Scores",            run_live_scores),
+        "10": ("IPL Zone",               run_ipl_zone),
+        "11": ("Dream11 Team Builder",   run_dream11),
+        "12": ("Prediction Accuracy",    run_accuracy_report),
+        "0":  ("Exit",                   None),
     }
 
     while True:
@@ -826,7 +1116,7 @@ def main():
         print("  MENU")
         print(f"  {'─'*W}")
         for k, (label, _) in menu.items():
-            print(f"    {k}.  {label}")
+            print(f"    {k:>2}.  {label}")
         print(f"  {'─'*W}")
 
         choice = input("\n  Choose option: ").strip()
@@ -845,7 +1135,7 @@ def main():
                 import traceback
                 traceback.print_exc()
         else:
-            print("  Invalid option. Enter 0-8.")
+            print("  Invalid option. Enter 0-12.")
 
 
 if __name__ == "__main__":

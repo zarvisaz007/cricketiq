@@ -116,24 +116,69 @@ def get_bowling_stats(player_name: str, match_type: str, last_n: int = None) -> 
 def get_recent_form(player_name: str, match_type: str, n: int = 10) -> float:
     """
     Returns a form score (0-100) based on last N performances.
-    Weighted: more recent = more weight.
+    Uses exponential decay: weight_i = exp(-0.1 * i), i=0 is most recent.
     """
-    batting = get_batting_stats(player_name, match_type, last_n=n)
-    bowling = get_bowling_stats(player_name, match_type, last_n=n)
+    import math
+    conn = get_connection()
 
-    score = 50.0  # default neutral
+    # Fetch last N batting innings with runs and balls
+    bat_rows = conn.execute("""
+        SELECT pms.runs, pms.balls_faced, m.date
+        FROM player_match_stats pms
+        JOIN matches m ON pms.match_id = m.id
+        WHERE pms.player_name = ? AND m.match_type = ? AND m.gender = 'male'
+          AND pms.balls_faced > 0
+        ORDER BY m.date DESC LIMIT ?
+    """, (player_name, match_type, n)).fetchall()
 
-    if batting["innings"] > 0:
-        # Normalize: avg 35 = score 60, sr 130 = score 60 (T20 context)
-        avg_score = min(batting["average"] / 50 * 70, 100)
-        sr_score = min(batting["strike_rate"] / 150 * 70, 100)
-        score = avg_score * 0.5 + sr_score * 0.5
+    bowl_rows = conn.execute("""
+        SELECT pms.overs_bowled, pms.runs_conceded, pms.wickets, m.date
+        FROM player_match_stats pms
+        JOIN matches m ON pms.match_id = m.id
+        WHERE pms.player_name = ? AND m.match_type = ? AND m.gender = 'male'
+          AND pms.overs_bowled > 0
+        ORDER BY m.date DESC LIMIT ?
+    """, (player_name, match_type, n)).fetchall()
+    conn.close()
 
-    elif bowling["matches"] > 0:
-        # Economy: lower is better. 7.0 econ = score 60
-        econ_score = max(0, 100 - bowling["economy"] * 8)
-        wick_score = min(bowling["total_wickets"] / bowling["matches"] * 40, 100)
-        score = econ_score * 0.5 + wick_score * 0.5
+    score = 50.0
+
+    if bat_rows:
+        weighted_avg = 0.0
+        weighted_sr = 0.0
+        total_w = 0.0
+        for i, r in enumerate(bat_rows):
+            w = math.exp(-0.1 * i)
+            total_w += w
+            avg_contrib = r["runs"]
+            sr_contrib = (r["runs"] / r["balls_faced"] * 100) if r["balls_faced"] > 0 else 0
+            weighted_avg += avg_contrib * w
+            weighted_sr += sr_contrib * w
+
+        if total_w > 0:
+            decay_avg = weighted_avg / total_w
+            decay_sr = weighted_sr / total_w
+            avg_score = min(decay_avg / 50 * 70, 100)
+            sr_score = min(decay_sr / 150 * 70, 100)
+            score = avg_score * 0.5 + sr_score * 0.5
+
+    elif bowl_rows:
+        weighted_econ = 0.0
+        weighted_wpm = 0.0
+        total_w = 0.0
+        for i, r in enumerate(bowl_rows):
+            w = math.exp(-0.1 * i)
+            total_w += w
+            econ = (r["runs_conceded"] / r["overs_bowled"]) if r["overs_bowled"] > 0 else 10
+            weighted_econ += econ * w
+            weighted_wpm += r["wickets"] * w
+
+        if total_w > 0:
+            decay_econ = weighted_econ / total_w
+            decay_wpm = weighted_wpm / total_w
+            econ_score = max(0, 100 - decay_econ * 8)
+            wick_score = min(decay_wpm * 40, 100)
+            score = econ_score * 0.5 + wick_score * 0.5
 
     return round(min(max(score, 0), 100), 2)
 

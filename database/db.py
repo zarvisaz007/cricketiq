@@ -104,5 +104,12 @@ def init_db():
     print(f"[DB] Initialized at {DB_PATH}")
 
 
+def migrate_db():
+    """Run all pending migrations."""
+    import importlib
+    mod = importlib.import_module("database.migrations.001_schema_v2")
+    mod.run_migration()
+
+
 if __name__ == "__main__":
     init_db()

@@ -1,0 +1,850 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2868
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fnil\fcharset0 Menlo-Regular;\f1\fnil\fcharset0 Menlo-BoldItalic;\f2\fnil\fcharset0 Menlo-Bold;
+}
+{\colortbl;\red255\green255\blue255;\red224\green224\blue224;\red25\green29\blue39;\red63\green63\blue63;
+\red237\green237\blue237;\red162\green168\blue247;}
+{\*\expandedcolortbl;;\csgenericrgb\c87761\c87761\c87761;\csgenericrgb\c9839\c11388\c15260\c95000;\cssrgb\c31373\c31373\c31373;
+\csgenericrgb\c92857\c92857\c92857;\cssrgb\c69412\c72549\c97647;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf2 \cb3 \CocoaLigature0  Here is Claude's plan:                                                                          \
+\cf4 \uc0\u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \cf2 \
+ 
+\f1\i\b \cf5 \ul \ulc5 CricketIQ v2 \'97 Upgrade Plan
+\f0\i0\b0 \cf2 \ulnone                                                                 \
+                                                                                                \
+ 
+\f2\b \cf5 Context
+\f0\b0 \cf2                                                                                        \
+                   \
+ CricketIQ MVP is functional: 9,351 matches ingested, 4 trained models (XGBoost at 86.5% T20), CLI \
+  with 8 features. The goal is to transform it into a powerful, precise prediction platform with\
+ live data, IPL focus, Dream11 fantasy team builder, and significantly improved prediction\
+ accuracy. We'll port proven code from the sister project (Claude-cricket) where possible.\
+\
+ ---\
+ 
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 0:
+\f0\b0 \cf2  
+\f2\b \cf5 Database
+\f0\b0 \cf2  
+\f2\b \cf5 Schema
+\f0\b0 \cf2  
+\f2\b \cf5 Upgrade
+\f0\b0 \cf2 \
+\
+ 
+\f2\b \cf5 Blocks
+\f0\b0 \cf2  
+\f2\b \cf5 everything
+\f0\b0 \cf2  
+\f2\b \cf5 else
+\f0\b0 \cf2  
+\f2\b \cf5 |
+\f0\b0 \cf2  
+\f2\b \cf5 Complexity:
+\f0\b0 \cf2  
+\f2\b \cf5 M
+\f0\b0 \cf2 \
+\
+ Add 9 new tables + indices to support all downstream features:\
+\
+ \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+ \uc0\u9474     New Table    \u9474                               Purpose                              \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf6 venues\cf2           \uc0\u9474  Pitch characteristics (batting/spin/pace/dew factors, avg scores) \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf6 tournaments\cf2      \uc0\u9474  Tournament metadata (IPL seasons, ICC events)                     \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf6 innings\cf2          \uc0\u9474  Per-innings summary (for live scores + phase analysis)            \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf6 deliveries\cf2       \uc0\u9474  Ball-by-ball data (for matchups + phase stats)                    \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf6 predictions_log\cf2  \uc0\u9474  Track every prediction + actual outcome                           \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf6 model_records\cf2    \uc0\u9474  ML model versions + accuracy metrics                              \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf6 pvor_match\cf2       \uc0\u9474  Per-player per-match PVOR values                                  \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf6 pvor_player_agg\cf2  \uc0\u9474  Aggregated PVOR stats                                             \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf6 live_matches\cf2     \uc0\u9474  Active live match tracking                                        \u9474 \
+ \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9524 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+\
+ Add columns to existing tables:\
+ - \cf6 matches\cf2 : \cf6 venue_id\cf2 , \cf6 tournament_id\cf2 , \cf6 cricbuzz_match_id\cf2 \
+ - \cf6 player_match_stats\cf2 : \cf6 batting_position\cf2 , \cf6 bowling_slot\cf2 , \cf6 catches\cf2 , \cf6 stumpings\cf2 \
+\
+ Add indices on frequently queried columns (matches.date, player_name+match_id, etc.)\
+\
+ 
+\f2\b \cf5 Files:
+\f0\b0 \cf2 \
+ - Create: \cf6 database/migrations/001_schema_v2.py\cf2 \
+ - Modify: \cf6 database/db.py\cf2 \
+ - Create: \cf6 database/seed_venues.py\cf2  (hardcoded data for ~30 major venues)\
+\
+ 
+\f2\b \cf5 Port
+\f0\b0 \cf2  
+\f2\b \cf5 from:
+\f0\b0 \cf2  Claude-cricket \cf6 src/data/db.py\cf2  schema (adapt from SQLAlchemy to raw sqlite3)\
+\
+ ---\
+ 
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 1:
+\f0\b0 \cf2  
+\f2\b \cf5 Prediction
+\f0\b0 \cf2  
+\f2\b \cf5 Engine
+\f0\b0 \cf2  
+\f2\b \cf5 v2
+\f0\b0 \cf2  
+\f2\b \cf5 \'97
+\f0\b0 \cf2  
+\f2\b \cf5 Feature
+\f0\b0 \cf2  
+\f2\b \cf5 Engineering
+\f0\b0 \cf2 \
+\
+ 
+\f2\b \cf5 Depends
+\f0\b0 \cf2  
+\f2\b \cf5 on:
+\f0\b0 \cf2  
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 0
+\f0\b0 \cf2  
+\f2\b \cf5 |
+\f0\b0 \cf2  
+\f2\b \cf5 Complexity:
+\f0\b0 \cf2  
+\f2\b \cf5 L
+\f0\b0 \cf2  
+\f2\b \cf5 |
+\f0\b0 \cf2  
+\f2\b \cf5 Highest
+\f0\b0 \cf2  
+\f2\b \cf5 impact
+\f0\b0 \cf2 \
+\
+ Expand from 11 features to 25+ features:\
+\
+ 
+\f2\b \cf5 1a.
+\f0\b0 \cf2  
+\f2\b \cf5 Exponential
+\f0\b0 \cf2  
+\f2\b \cf5 Decay
+\f0\b0 \cf2  
+\f2\b \cf5 Form
+\f0\b0 \cf2  
+\f2\b \cf5 (S)
+\f0\b0 \cf2 \
+\
+ Replace uniform weighting in \cf6 team_features.py\cf2  and \cf6 player_features.py\cf2  with:\
+ weight_i = exp(-0.1 * i)  # i=0 is most recent match\
+ 
+\f2\b \cf5 Why:
+\f0\b0 \cf2  A player losing last 5 but winning 5 before that shouldn't equal winning last 5.\
+\
+ 
+\f2\b \cf5 1b.
+\f0\b0 \cf2  
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 Analysis
+\f0\b0 \cf2  
+\f2\b \cf5 (M)
+\f0\b0 \cf2 \
+\
+ Parse ball-by-ball data into T20 phases (powerplay 1-6, middle 7-15, death 16-20):\
+ - \cf6 powerplay_run_rate_diff\cf2 , \cf6 death_economy_diff\cf2 , \cf6 middle_wicket_rate_diff\cf2 \
+ - Track batting_position during ingestion\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 backend/features/phase_features.py\cf2 \
+ 
+\f2\b \cf5 Modify:
+\f0\b0 \cf2  \cf6 backend/data/ingestion.py\cf2  (track over_number, batting order)\
+\
+ 
+\f2\b \cf5 1c.
+\f0\b0 \cf2  
+\f2\b \cf5 Venue/Pitch
+\f0\b0 \cf2  
+\f2\b \cf5 Features
+\f0\b0 \cf2  
+\f2\b \cf5 (M)
+\f0\b0 \cf2 \
+\
+ From \cf6 venues\cf2  table: \cf6 venue_batting_factor\cf2 , \cf6 venue_spin_factor\cf2 , \cf6 venue_dew_factor\cf2 , \cf6 home_advantage\cf2 ,\
+ \cf6 avg_first_innings_score\cf2 \
+\
+ 
+\f2\b \cf5 1d.
+\f0\b0 \cf2  
+\f2\b \cf5 H2H
+\f0\b0 \cf2  
+\f2\b \cf5 Recency
+\f0\b0 \cf2  
+\f2\b \cf5 (S)
+\f0\b0 \cf2 \
+\
+ Last 5 H2H with decay weighting, H2H at specific venue, H2H win streak\
+\
+ 
+\f2\b \cf5 1e.
+\f0\b0 \cf2  
+\f2\b \cf5 Bowler-Batter
+\f0\b0 \cf2  
+\f2\b \cf5 Matchups
+\f0\b0 \cf2  
+\f2\b \cf5 (L
+\f0\b0 \cf2  
+\f2\b \cf5 \'97
+\f0\b0 \cf2  
+\f2\b \cf5 can
+\f0\b0 \cf2  
+\f2\b \cf5 defer)
+\f0\b0 \cf2 \
+\
+ Per-player matchup stats from deliveries table. Creates \cf6 matchup_advantage\cf2  feature.\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 backend/features/matchup_features.py\cf2 \
+\
+ 
+\f2\b \cf5 1f.
+\f0\b0 \cf2  
+\f2\b \cf5 Feature
+\f0\b0 \cf2  
+\f2\b \cf5 Registry
+\f0\b0 \cf2  
+\f2\b \cf5 (M)
+\f0\b0 \cf2 \
+\
+ Central \cf6 FEATURE_COLS\cf2  list + defaults dict for all 25+ features.\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 backend/features/feature_registry.py\cf2 \
+\
+ ---\
+ 
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 2:
+\f0\b0 \cf2  
+\f2\b \cf5 Model
+\f0\b0 \cf2  
+\f2\b \cf5 Training
+\f0\b0 \cf2  
+\f2\b \cf5 v2
+\f0\b0 \cf2 \
+\
+ 
+\f2\b \cf5 Depends
+\f0\b0 \cf2  
+\f2\b \cf5 on:
+\f0\b0 \cf2  
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 1
+\f0\b0 \cf2  
+\f2\b \cf5 |
+\f0\b0 \cf2  
+\f2\b \cf5 Complexity:
+\f0\b0 \cf2  
+\f2\b \cf5 L
+\f0\b0 \cf2 \
+\
+ 
+\f2\b \cf5 2a.
+\f0\b0 \cf2  
+\f2\b \cf5 Time-Series
+\f0\b0 \cf2  
+\f2\b \cf5 Cross-Validation
+\f0\b0 \cf2  
+\f2\b \cf5 (M)
+\f0\b0 \cf2 \
+\
+ Replace random split with \cf6 TimeSeriesSplit\cf2  \'97 prevents lookahead bias.\
+\
+ 
+\f2\b \cf5 2b.
+\f0\b0 \cf2  
+\f2\b \cf5 Prediction
+\f0\b0 \cf2  
+\f2\b \cf5 Calibration
+\f0\b0 \cf2  
+\f2\b \cf5 (M)
+\f0\b0 \cf2 \
+\
+ Platt scaling / isotonic regression so "70% predictions" actually win 70% of the time.\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 backend/models/calibration.py\cf2 \
+\
+ 
+\f2\b \cf5 2c.
+\f0\b0 \cf2  
+\f2\b \cf5 Confidence-Weighted
+\f0\b0 \cf2  
+\f2\b \cf5 Ensemble
+\f0\b0 \cf2  
+\f2\b \cf5 (M)
+\f0\b0 \cf2 \
+\
+ Replace simple average with learned weights based on each model's recent Brier score. Flag\
+ reduced confidence when models disagree >20%.\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 backend/models/ensemble.py\cf2 \
+\
+ 
+\f2\b \cf5 2d.
+\f0\b0 \cf2  
+\f2\b \cf5 Prediction
+\f0\b0 \cf2  
+\f2\b \cf5 Tracking
+\f0\b0 \cf2  
+\f2\b \cf5 (M)
+\f0\b0 \cf2 \
+\
+ Log every prediction to \cf6 predictions_log\cf2 . Backfill outcomes. Add CLI option: "Prediction Accuracy\
+ Report" with calibration curve.\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 backend/models/prediction_tracker.py\cf2 \
+\
+ 
+\f2\b \cf5 2e.
+\f0\b0 \cf2  
+\f2\b \cf5 Hyperparameter
+\f0\b0 \cf2  
+\f2\b \cf5 Tuning
+\f0\b0 \cf2  
+\f2\b \cf5 (S)
+\f0\b0 \cf2 \
+\
+ Optuna/GridSearchCV for XGBoost tuning.\
+\
+ ---\
+ 
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 3:
+\f0\b0 \cf2  
+\f2\b \cf5 Live
+\f0\b0 \cf2  
+\f2\b \cf5 Data
+\f0\b0 \cf2  
+\f2\b \cf5 Integration
+\f0\b0 \cf2 \
+\
+ 
+\f2\b \cf5 Depends
+\f0\b0 \cf2  
+\f2\b \cf5 on:
+\f0\b0 \cf2  
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 0
+\f0\b0 \cf2  
+\f2\b \cf5 |
+\f0\b0 \cf2  
+\f2\b \cf5 Complexity:
+\f0\b0 \cf2  
+\f2\b \cf5 L
+\f0\b0 \cf2 \
+\
+ 
+\f2\b \cf5 3a.
+\f0\b0 \cf2  
+\f2\b \cf5 HTTP
+\f0\b0 \cf2  
+\f2\b \cf5 Client
+\f0\b0 \cf2  
+\f2\b \cf5 (S)
+\f0\b0 \cf2 \
+\
+ Rotating user-agents, rate limiting (2s delay), retry with exponential backoff.\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 backend/scrapers/http_client.py\cf2 \
+ 
+\f2\b \cf5 Port
+\f0\b0 \cf2  
+\f2\b \cf5 from:
+\f0\b0 \cf2  Claude-cricket \cf6 src/scrapers/http_client.py\cf2 \
+\
+ 
+\f2\b \cf5 3b.
+\f0\b0 \cf2  
+\f2\b \cf5 Cricbuzz
+\f0\b0 \cf2  
+\f2\b \cf5 Live
+\f0\b0 \cf2  
+\f2\b \cf5 Scraper
+\f0\b0 \cf2  
+\f2\b \cf5 (L)
+\f0\b0 \cf2 \
+\
+ - \cf6 get_live_matches()\cf2  \'97 scrape live scores page for active match IDs\
+ - \cf6 fetch_live_scorecard(id)\cf2  \'97 JSON API first, HTML fallback\
+ - Store in \cf6 innings\cf2  table\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 backend/scrapers/cricbuzz_live.py\cf2 \
+ 
+\f2\b \cf5 Port
+\f0\b0 \cf2  
+\f2\b \cf5 from:
+\f0\b0 \cf2  Claude-cricket \cf6 src/scrapers/cricbuzz_live.py\cf2  (adapt from SQLAlchemy to sqlite3)\
+\
+ 
+\f2\b \cf5 3c.
+\f0\b0 \cf2  
+\f2\b \cf5 ESPN
+\f0\b0 \cf2  
+\f2\b \cf5 Historical
+\f0\b0 \cf2  
+\f2\b \cf5 Scraper
+\f0\b0 \cf2  
+\f2\b \cf5 (M
+\f0\b0 \cf2  
+\f2\b \cf5 \'97
+\f0\b0 \cf2  
+\f2\b \cf5 can
+\f0\b0 \cf2  
+\f2\b \cf5 defer)
+\f0\b0 \cf2 \
+\
+ Backfill historical data not in Cricsheet.\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 backend/scrapers/espn_historical.py\cf2 \
+\
+ 
+\f2\b \cf5 3d.
+\f0\b0 \cf2  
+\f2\b \cf5 Live
+\f0\b0 \cf2  
+\f2\b \cf5 Match
+\f0\b0 \cf2  
+\f2\b \cf5 Poller
+\f0\b0 \cf2  
+\f2\b \cf5 (M)
+\f0\b0 \cf2 \
+\
+ Background daemon thread, polls every 30-60s, upserts innings data.\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 backend/scrapers/live_poller.py\cf2 \
+\
+ 
+\f2\b \cf5 3e.
+\f0\b0 \cf2  
+\f2\b \cf5 CLI
+\f0\b0 \cf2  
+\f2\b \cf5 Live
+\f0\b0 \cf2  
+\f2\b \cf5 Scores
+\f0\b0 \cf2  
+\f2\b \cf5 (S)
+\f0\b0 \cf2 \
+\
+ New menu: list live matches, show scorecard, auto-refresh.\
+\
+ ---\
+ 
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 4:
+\f0\b0 \cf2  
+\f2\b \cf5 IPL-Specific
+\f0\b0 \cf2  
+\f2\b \cf5 Features
+\f0\b0 \cf2 \
+\
+ 
+\f2\b \cf5 Depends
+\f0\b0 \cf2  
+\f2\b \cf5 on:
+\f0\b0 \cf2  
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 0,
+\f0\b0 \cf2  
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 1
+\f0\b0 \cf2  
+\f2\b \cf5 |
+\f0\b0 \cf2  
+\f2\b \cf5 Complexity:
+\f0\b0 \cf2  
+\f2\b \cf5 M
+\f0\b0 \cf2 \
+\
+ 
+\f2\b \cf5 4a.
+\f0\b0 \cf2  
+\f2\b \cf5 IPL
+\f0\b0 \cf2  
+\f2\b \cf5 Feature
+\f0\b0 \cf2  
+\f2\b \cf5 Engineering
+\f0\b0 \cf2  
+\f2\b \cf5 (M)
+\f0\b0 \cf2 \
+\
+ - Franchise strength, home ground advantage, foreign player impact (max 4 rule)\
+ - IPL form (current season + last season)\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 backend/features/ipl_features.py\cf2 \
+\
+ 
+\f2\b \cf5 4b.
+\f0\b0 \cf2  
+\f2\b \cf5 IPL-Specific
+\f0\b0 \cf2  
+\f2\b \cf5 Model
+\f0\b0 \cf2  
+\f2\b \cf5 (M)
+\f0\b0 \cf2 \
+\
+ Separate XGBoost trained only on IPL data. IPL dynamics differ from T20I (franchise vs national\
+ teams).\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 backend/models/ipl_predictor.py\cf2 \
+\
+ 
+\f2\b \cf5 4c.
+\f0\b0 \cf2  
+\f2\b \cf5 IPL
+\f0\b0 \cf2  
+\f2\b \cf5 Season
+\f0\b0 \cf2  
+\f2\b \cf5 Tracker
+\f0\b0 \cf2  
+\f2\b \cf5 (S)
+\f0\b0 \cf2 \
+\
+ Points table, Net Run Rate, playoff probability simulator (Monte Carlo over remaining matches).\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 backend/features/ipl_season.py\cf2 \
+\
+ 
+\f2\b \cf5 4d.
+\f0\b0 \cf2  
+\f2\b \cf5 CLI
+\f0\b0 \cf2  
+\f2\b \cf5 IPL
+\f0\b0 \cf2  
+\f2\b \cf5 Menu
+\f0\b0 \cf2  
+\f2\b \cf5 (S)
+\f0\b0 \cf2 \
+\
+ "IPL Zone" submenu: IPL predictions, points table, playoff probabilities, team rankings.\
+\
+ ---\
+ 
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 5:
+\f0\b0 \cf2  
+\f2\b \cf5 Dream11
+\f0\b0 \cf2  
+\f2\b \cf5 Fantasy
+\f0\b0 \cf2  
+\f2\b \cf5 Team
+\f0\b0 \cf2  
+\f2\b \cf5 Builder
+\f0\b0 \cf2 \
+\
+ 
+\f2\b \cf5 Depends
+\f0\b0 \cf2  
+\f2\b \cf5 on:
+\f0\b0 \cf2  
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 1,
+\f0\b0 \cf2  
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 4
+\f0\b0 \cf2  
+\f2\b \cf5 |
+\f0\b0 \cf2  
+\f2\b \cf5 Complexity:
+\f0\b0 \cf2  
+\f2\b \cf5 L
+\f0\b0 \cf2 \
+\
+ 
+\f2\b \cf5 5a.
+\f0\b0 \cf2  
+\f2\b \cf5 Dream11
+\f0\b0 \cf2  
+\f2\b \cf5 Scoring
+\f0\b0 \cf2  
+\f2\b \cf5 System
+\f0\b0 \cf2  
+\f2\b \cf5 (M)
+\f0\b0 \cf2 \
+\
+ Full scoring model: batting (+1/run, +1 boundary, +2 six, milestones), bowling (+25/wicket,\
+ maidens, economy), fielding (+8 catch, +12 stumping), Captain 2x, VC 1.5x.\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 backend/fantasy/dream11_scoring.py\cf2 \
+\
+ 
+\f2\b \cf5 5b.
+\f0\b0 \cf2  
+\f2\b \cf5 Fantasy
+\f0\b0 \cf2  
+\f2\b \cf5 Team
+\f0\b0 \cf2  
+\f2\b \cf5 Selector
+\f0\b0 \cf2  
+\f2\b \cf5 (L)
+\f0\b0 \cf2 \
+\
+ Integer linear programming (PuLP) to maximize expected fantasy points subject to constraints:\
+ - 11 players from both teams\
+ - Min 1 max 8 from each team\
+ - Role balance: min 1 WK, min 3 BAT, min 3 BOWL, min 1 AR\
+ - 100 credit budget\
+ - Captain + Vice-Captain selection (highest expected point differential)\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2 \
+ - \cf6 backend/fantasy/team_selector.py\cf2  \'97 optimizer\
+ - \cf6 backend/fantasy/expected_points.py\cf2  \'97 predict expected Dream11 points per player\
+ - \cf6 backend/fantasy/credit_values.py\cf2  \'97 player credit values\
+\
+ 
+\f2\b \cf5 Port
+\f0\b0 \cf2  
+\f2\b \cf5 from:
+\f0\b0 \cf2  Claude-cricket \cf6 src/ml/team_selector.py\cf2  (extend significantly with constraints +\
+ optimization)\
+\
+ 
+\f2\b \cf5 5c.
+\f0\b0 \cf2  
+\f2\b \cf5 CLI
+\f0\b0 \cf2  
+\f2\b \cf5 Fantasy
+\f0\b0 \cf2  
+\f2\b \cf5 Menu
+\f0\b0 \cf2  
+\f2\b \cf5 (M)
+\f0\b0 \cf2 \
+\
+ "Dream11 Team Builder": select match, show recommended XI with roles, Captain/VC, expected points\
+  breakdown, confidence, alternative picks.\
+\
+ ---\
+ 
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 6:
+\f0\b0 \cf2  
+\f2\b \cf5 Advanced
+\f0\b0 \cf2  
+\f2\b \cf5 PVOR
+\f0\b0 \cf2  
+\f2\b \cf5 Overhaul
+\f0\b0 \cf2 \
+\
+ 
+\f2\b \cf5 Depends
+\f0\b0 \cf2  
+\f2\b \cf5 on:
+\f0\b0 \cf2  
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 0,
+\f0\b0 \cf2  
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 1
+\f0\b0 \cf2  
+\f2\b \cf5 |
+\f0\b0 \cf2  
+\f2\b \cf5 Complexity:
+\f0\b0 \cf2  
+\f2\b \cf5 M
+\f0\b0 \cf2 \
+\
+ Replace 10-second MC-based PVOR with sub-second analytical PVOR:\
+ batting_pvor = (player_runs - replacement_avg) / replacement_std\
+ bowling_pvor = (replacement_wpm - player_wpm) / replacement_std\
+ Where replacement level = 25th percentile at same batting position/bowling slot.\
+\
+ Keep MC-based PVOR as secondary option. Add rolling PVOR aggregation (30d, 90d, career).\
+\
+ 
+\f2\b \cf5 Port
+\f0\b0 \cf2  
+\f2\b \cf5 from:
+\f0\b0 \cf2  Claude-cricket \cf6 src/analytics/pvor.py\cf2 \
+\
+ ---\
+ 
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 7:
+\f0\b0 \cf2  
+\f2\b \cf5 Telegram
+\f0\b0 \cf2  
+\f2\b \cf5 Bot
+\f0\b0 \cf2 \
+\
+ 
+\f2\b \cf5 Depends
+\f0\b0 \cf2  
+\f2\b \cf5 on:
+\f0\b0 \cf2  
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 2,
+\f0\b0 \cf2  
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 3
+\f0\b0 \cf2  
+\f2\b \cf5 |
+\f0\b0 \cf2  
+\f2\b \cf5 Complexity:
+\f0\b0 \cf2  
+\f2\b \cf5 M
+\f0\b0 \cf2 \
+\
+ Port bot from Claude-cricket with CricketIQ's prediction pipeline:\
+ - Menu: Predict, Live Scores, Player Report, Dream11 Team, IPL Zone, Leaderboards\
+ - Inline keyboard navigation, "Why?" button for explanations\
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 bot/main.py\cf2 , modify \cf6 frontend/bot/handlers.py\cf2 , create \cf6 bot/formatters.py\cf2 \
+ 
+\f2\b \cf5 Port
+\f0\b0 \cf2  
+\f2\b \cf5 from:
+\f0\b0 \cf2  Claude-cricket \cf6 src/bot/main.py\cf2  + \cf6 handlers.py\cf2 \
+\
+ ---\
+ 
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 8:
+\f0\b0 \cf2  
+\f2\b \cf5 Auto-Retrain
+\f0\b0 \cf2  
+\f2\b \cf5 &
+\f0\b0 \cf2  
+\f2\b \cf5 Infrastructure
+\f0\b0 \cf2 \
+\
+ 
+\f2\b \cf5 Depends
+\f0\b0 \cf2  
+\f2\b \cf5 on:
+\f0\b0 \cf2  
+\f2\b \cf5 Phase
+\f0\b0 \cf2  
+\f2\b \cf5 2
+\f0\b0 \cf2  
+\f2\b \cf5 |
+\f0\b0 \cf2  
+\f2\b \cf5 Complexity:
+\f0\b0 \cf2  
+\f2\b \cf5 M
+\f0\b0 \cf2 \
+\
+ - Nightly retrain script: incremental data download + ingest + retrain + log metrics\
+ - Orchestrator upgrade: add \cf6 scrape_espn\cf2 , \cf6 seed_venues\cf2 , \cf6 train_ipl\cf2 , \cf6 pvor_batch\cf2 , \cf6 calibrate\cf2 \
+ - Updated requirements.txt: \cf6 beautifulsoup4\cf2 , \cf6 lxml\cf2 , \cf6 tenacity\cf2 , \cf6 python-telegram-bot\cf2 , \cf6 pulp\cf2 \
+ - Updated Makefile: \cf6 migrate\cf2 , \cf6 scrape\cf2 , \cf6 live\cf2 , \cf6 ipl\cf2 , \cf6 fantasy\cf2 , \cf6 bot\cf2 , \cf6 retrain\cf2 \
+\
+ 
+\f2\b \cf5 Create:
+\f0\b0 \cf2  \cf6 scripts/nightly_retrain.py\cf2 \
+\
+ ---\
+ 
+\f2\b \cf5 Implementation
+\f0\b0 \cf2  
+\f2\b \cf5 Order
+\f0\b0 \cf2 \
+\
+ Phase 0 (DB Schema)\
+   \uc0\u9500 \u9472 \u9472 > Phase 1a-1d (Form, Venue, H2H features)\
+   \uc0\u9474       \u9492 \u9472 \u9472 > Phase 1b (Phase analysis \'97 needs ingestion changes)\
+   \uc0\u9474              \u9492 \u9472 \u9472 > Phase 1f (Feature registry)\
+   \uc0\u9474                     \u9492 \u9472 \u9472 > Phase 2 (Models v2)\
+   \uc0\u9474                            \u9500 \u9472 \u9472 > Phase 7 (Telegram Bot)\
+   \uc0\u9474                            \u9492 \u9472 \u9472 > Phase 8 (Auto-retrain)\
+   \uc0\u9500 \u9472 \u9472 > Phase 3 (Live Data) \u9472 \u9472 > Phase 7\
+   \uc0\u9500 \u9472 \u9472 > Phase 4 (IPL) \u9472 \u9472 > Phase 5 (Dream11)\
+   \uc0\u9492 \u9472 \u9472 > Phase 6 (PVOR overhaul)\
+\
+ 
+\f2\b \cf5 Recommended
+\f0\b0 \cf2  
+\f2\b \cf5 build
+\f0\b0 \cf2  
+\f2\b \cf5 sequence:
+\f0\b0 \cf2 \
+ 1. Phase 0 \uc0\u8594  2. Phase 1a-1d \u8594  3. Phase 1b \u8594  4. Phase 1f \u8594  5. Phase 2a-2c \u8594  6. Phase 2d \u8594  7. Phase\
+  3a-3b \uc0\u8594  8. Phase 3d-3e \u8594  9. Phase 4 \u8594  10. Phase 5 \u8594  11. Phase 6 \u8594  12. Phase 7 \u8594  13. Phase 8\
+\
+ ---\
+ 
+\f2\b \cf5 Verification
+\f0\b0 \cf2  
+\f2\b \cf5 Strategy
+\f0\b0 \cf2 \
+\
+ After each phase:\
+ - Run prediction on India vs Australia T20 to confirm pipeline works\
+ - Compare accuracy before/after on held-out test set\
+ - Verify DB integrity (no orphan records, indices active)\
+ - CLI menu loads without errors\
+\
+ Final validation:\
+ - XGBoost accuracy target: 88-90% (up from 86.5%)\
+ - Calibration: predicted 70% should win ~70% of the time\
+ - Dream11 team satisfies all constraints\
+ - Live scores update during active matches\
+ - IPL model outperforms generic T20 model on IPL matches}

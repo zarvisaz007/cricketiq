@@ -12,14 +12,19 @@ from database.db import get_connection
 
 
 def get_head_to_head(team1: str, team2: str, match_type: str, gender: str = "male") -> dict:
-    """Returns head-to-head record between two teams."""
+    """
+    Returns head-to-head record between two teams.
+    Includes decay-weighted recent H2H, venue-specific H2H, and win streak.
+    """
+    import math
     conn = get_connection()
     rows = conn.execute("""
-        SELECT winner FROM matches
+        SELECT winner, venue, date FROM matches
         WHERE match_type = ?
           AND gender = ?
           AND ((team1 = ? AND team2 = ?) OR (team1 = ? AND team2 = ?))
           AND winner IS NOT NULL
+        ORDER BY date DESC
     """, (match_type, gender, team1, team2, team2, team1)).fetchall()
     conn.close()
 
@@ -27,16 +32,44 @@ def get_head_to_head(team1: str, team2: str, match_type: str, gender: str = "mal
     team1_wins = sum(1 for r in rows if r["winner"] == team1)
     team2_wins = sum(1 for r in rows if r["winner"] == team2)
 
+    # Decay-weighted H2H (last 5 matches, more recent = more weight)
+    recent = rows[:5]
+    h2h_decay_pct = 50.0
+    if recent:
+        w_wins = 0.0
+        w_total = 0.0
+        for i, r in enumerate(recent):
+            w = math.exp(-0.15 * i)
+            w_total += w
+            if r["winner"] == team1:
+                w_wins += w
+        h2h_decay_pct = round(w_wins / w_total * 100, 1) if w_total > 0 else 50.0
+
+    # Win streak: consecutive wins for team1 from most recent
+    win_streak = 0
+    for r in rows:
+        if r["winner"] == team1:
+            win_streak += 1
+        else:
+            break
+
     return {
         "total": total,
         "team1_wins": team1_wins,
         "team2_wins": team2_wins,
         "team1_win_pct": round(team1_wins / total * 100, 1) if total > 0 else 50.0,
+        "h2h_decay_pct": h2h_decay_pct,
+        "team1_win_streak": win_streak,
     }
 
 
 def get_team_recent_form(team: str, match_type: str, n: int = 10, gender: str = "male") -> float:
-    """Returns team form score (0-100) based on last N matches."""
+    """
+    Returns team form score (0-100) based on last N matches.
+    Uses exponential decay: recent matches weigh more.
+    weight_i = exp(-0.1 * i) where i=0 is most recent.
+    """
+    import math
     conn = get_connection()
     rows = conn.execute("""
         SELECT winner FROM matches
@@ -52,8 +85,15 @@ def get_team_recent_form(team: str, match_type: str, n: int = 10, gender: str = 
     if not rows:
         return 50.0
 
-    wins = sum(1 for r in rows if r["winner"] == team)
-    return round(wins / len(rows) * 100, 1)
+    weighted_wins = 0.0
+    total_weight = 0.0
+    for i, r in enumerate(rows):
+        w = math.exp(-0.1 * i)
+        total_weight += w
+        if r["winner"] == team:
+            weighted_wins += w
+
+    return round(weighted_wins / total_weight * 100, 1) if total_weight > 0 else 50.0
 
 
 def get_venue_win_rate(team: str, venue: str, match_type: str, gender: str = "male") -> float:

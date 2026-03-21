@@ -122,3 +122,33 @@ def compute_team_pvor(team: str, opponent: str, match_type: str,
 
     results.sort(key=lambda x: x["pvor"], reverse=True)
     return results
+
+
+def compute_pvor_fast(player_name: str, team: str, opponent: str,
+                      match_type: str) -> dict:
+    """
+    Fast analytical PVOR (sub-second). Uses statistical formula instead of MC.
+    Falls back to MC-based PVOR if analytical data is insufficient.
+    """
+    try:
+        from impact.pvor_analytical import compute_analytical_pvor
+        result = compute_analytical_pvor(player_name, match_type)
+        return {
+            "player": player_name,
+            "team": team,
+            "opponent": opponent,
+            "win_with": None,  # not applicable for analytical
+            "win_without": None,
+            "pvor": result["total_pvor"],
+            "batting_pvor": result["batting_pvor"],
+            "bowling_pvor": result["bowling_pvor"],
+            "fielding_pvor": result["fielding_pvor"],
+            "impact_label": result["impact_label"],
+            "role": result["role"],
+            "method": "analytical",
+        }
+    except Exception:
+        # Fallback to MC
+        result = compute_pvor(player_name, team, opponent, match_type)
+        result["method"] = "monte_carlo"
+        return result

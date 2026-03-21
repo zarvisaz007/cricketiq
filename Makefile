@@ -2,7 +2,7 @@
 # Run `make help` to see all commands.
 
 .PHONY: help setup download ingest ratings train run clean reset \
-        migrate seed-venues train-ipl live fantasy bot retrain
+        migrate migrate-002 seed-venues train-ipl live fantasy bot retrain schedule
 
 help:
 	@echo ""
@@ -22,6 +22,8 @@ help:
 	@echo "  make live       Start live score poller"
 	@echo "  make fantasy    Show Dream11 team builder (via CLI)"
 	@echo "  make bot        Start Telegram bot"
+	@echo "  make schedule   Scrape upcoming match schedule"
+	@echo "  make migrate-002 Run upcoming_matches migration"
 	@echo "  make retrain    Run nightly retrain script"
 	@echo "  make clean      Remove trained models"
 	@echo "  make reset      Wipe DB and start fresh"
@@ -41,6 +43,10 @@ db:
 
 migrate:
 	python3 database/migrations/001_schema_v2.py
+	python3 database/migrations/002_upcoming_matches.py
+
+migrate-002:
+	python3 database/migrations/002_upcoming_matches.py
 
 seed-venues:
 	python3 database/seed_venues.py
@@ -69,6 +75,9 @@ live:
 bot:
 	python3 bot/main.py
 
+schedule:
+	python3 backend/scrapers/cricbuzz_schedule.py
+
 retrain:
 	python3 scripts/nightly_retrain.py
 
@@ -80,5 +89,6 @@ reset: clean
 	rm -f database/cricketiq.db
 	python3 scripts/setup_db.py
 	python3 database/migrations/001_schema_v2.py
+	python3 database/migrations/002_upcoming_matches.py
 	python3 database/seed_venues.py
 	@echo "Database reset. Run: make ingest"

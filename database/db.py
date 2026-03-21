@@ -107,8 +107,10 @@ def init_db():
 def migrate_db():
     """Run all pending migrations."""
     import importlib
-    mod = importlib.import_module("database.migrations.001_schema_v2")
-    mod.run_migration()
+    mod1 = importlib.import_module("database.migrations.001_schema_v2")
+    mod1.run_migration()
+    mod2 = importlib.import_module("database.migrations.002_upcoming_matches")
+    mod2.run_migration()
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 """
 bot/main.py
 CricketIQ Telegram Bot entry point.
-Provides: Predict, Live Scores, Player Report, Dream11 Team, IPL Zone, Leaderboards.
+Menu-driven interface with inline keyboards, background pollers, and rich formatting.
 
 Usage:
     python3 bot/main.py
@@ -9,19 +9,19 @@ Usage:
 """
 import sys
 import os
-import asyncio
 import logging
 
 _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 for _p in [_root, os.path.join(_root, "backend")]:
-    if _p not in sys.path: sys.path.insert(0, _p)
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from dotenv import load_dotenv
 load_dotenv()
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
+    level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
 
@@ -29,81 +29,156 @@ TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 
 def run_bot():
-    """Start the Telegram bot."""
+    """Start the Telegram bot with all handlers and pollers."""
     if not TOKEN:
         print("[Bot] TELEGRAM_BOT_TOKEN not set in .env")
         print("  Set it: echo 'TELEGRAM_BOT_TOKEN=your_token' >> .env")
         return
 
     try:
-        from telegram.ext import (Application, CommandHandler, CallbackQueryHandler,
-                                  MessageHandler, filters, ConversationHandler)
+        from telegram.ext import (
+            Application, CommandHandler, CallbackQueryHandler,
+            MessageHandler, filters,
+        )
     except ImportError:
         print("[Bot] python-telegram-bot not installed. Run: pip install python-telegram-bot")
         return
 
-    # Import handlers from existing bot module
-    try:
-        from frontend.bot.handlers import (
-            start_handler, help_handler, predict_handler, player_handler,
-            team_handler, top_handler, alerts_handler, elo_handler, pvor_handler,
-        )
-        has_handlers = True
-    except ImportError:
-        has_handlers = False
+    # Import handler modules
+    from frontend.bot.handlers_menu import (
+        cmd_start, main_menu_callback, help_callback, help_command, back_callback,
+    )
+    from frontend.bot.handlers_upcoming import (
+        upcoming_matches, upcoming_page, match_detail,
+    )
+    from frontend.bot.handlers_predict import (
+        predict_from_match, quick_predict_start, quick_predict_manual,
+        quick_predict_fmt, quick_predict_t1, quick_predict_t1_page,
+        quick_predict_t2, quick_predict_t2_page,
+    )
+    from frontend.bot.handlers_dream11 import (
+        dream11_start, dream11_from_match, dream11_manual,
+        dream11_fmt, dream11_t1, dream11_t1_page,
+        dream11_t2, dream11_t2_page,
+    )
+    from frontend.bot.handlers_ipl import (
+        ipl_zone, ipl_points_table, ipl_playoff_probs,
+        ipl_predictions, ipl_team_rankings,
+    )
+    from frontend.bot.handlers_player import (
+        player_lookup_start, player_search_prompt, player_search_text,
+        player_browse_start, player_browse_fmt, player_browse_fmt_page,
+        player_browse_team, player_browse_team_page, player_profile,
+    )
+    from frontend.bot.handlers_team import (
+        team_analysis_start, team_analysis_fmt, team_analysis_fmt_page,
+        team_analysis_team,
+    )
+    from frontend.bot.handlers_live import live_scores, live_detail
+    from frontend.bot.handlers_leaderboard import (
+        leaderboards_menu, elo_rankings_start, elo_rankings_fmt,
+        top_players_start, top_players_fmt,
+    )
 
-    app = Application.builder().token(TOKEN).build()
+    # ── Build application ──────────────────────────────────────
 
-    if has_handlers:
-        # Register existing conversation handlers
-        for handler in [predict_handler, player_handler, team_handler,
-                        top_handler, alerts_handler, elo_handler, pvor_handler]:
-            app.add_handler(handler)
-        app.add_handler(CommandHandler("start", start_handler))
-        app.add_handler(CommandHandler("help", help_handler))
-    else:
-        # Minimal handlers
-        async def cmd_start(update, context):
-            from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-            keyboard = [
-                [InlineKeyboardButton("Match Prediction", callback_data="predict"),
-                 InlineKeyboardButton("Live Scores", callback_data="live")],
-                [InlineKeyboardButton("Player Report", callback_data="player"),
-                 InlineKeyboardButton("Dream11 Team", callback_data="dream11")],
-                [InlineKeyboardButton("IPL Zone", callback_data="ipl"),
-                 InlineKeyboardButton("Leaderboards", callback_data="leaderboard")],
-            ]
-            await update.message.reply_text(
-                "Welcome to CricketIQ v2!\nChoose an option:",
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
+    async def post_init(app):
+        """Start background pollers after bot initialization."""
+        try:
+            from scrapers.live_poller import start_poller
+            start_poller()
+            logger.info("Live score poller started (45s interval)")
+        except Exception as e:
+            logger.warning(f"Failed to start live poller: {e}")
 
-        async def cmd_help(update, context):
-            await update.message.reply_text(
-                "CricketIQ v2 — Cricket Prediction Bot\n\n"
-                "Commands:\n"
-                "/start - Main menu\n"
-                "/help - This help message\n\n"
-                "Features:\n"
-                "- Match predictions (Elo + XGBoost + Monte Carlo)\n"
-                "- Live scores from Cricbuzz\n"
-                "- Player analysis & PVOR\n"
-                "- Dream11 team builder\n"
-                "- IPL zone (points table, playoff probabilities)\n"
-                "- Team & player leaderboards"
-            )
+        try:
+            from scrapers.schedule_poller import start_schedule_poller, start_xi_poller
+            start_schedule_poller()
+            start_xi_poller()
+            logger.info("Schedule poller started (6h interval) + XI poller (30min interval)")
+        except Exception as e:
+            logger.warning(f"Failed to start schedule pollers: {e}")
 
-        async def handle_callback(update, context):
-            query = update.callback_query
-            await query.answer()
-            await query.edit_message_text(
-                f"Feature '{query.data}' selected.\n"
-                "Use the CLI for full functionality: python3 frontend/test_cli.py"
-            )
+    app = Application.builder().token(TOKEN).post_init(post_init).build()
 
-        app.add_handler(CommandHandler("start", cmd_start))
-        app.add_handler(CommandHandler("help", cmd_help))
-        app.add_handler(CallbackQueryHandler(handle_callback))
+    # ── Command handlers ───────────────────────────────────────
+
+    app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("help", help_command))
+
+    # ── Callback query handlers (pattern-matched) ──────────────
+
+    # Menu navigation
+    app.add_handler(CallbackQueryHandler(main_menu_callback, pattern="^main_menu$"))
+    app.add_handler(CallbackQueryHandler(help_callback, pattern="^help$"))
+    app.add_handler(CallbackQueryHandler(back_callback, pattern="^back$"))
+
+    # Upcoming matches
+    app.add_handler(CallbackQueryHandler(upcoming_matches, pattern="^upcoming$"))
+    app.add_handler(CallbackQueryHandler(upcoming_page, pattern=r"^upcoming_pg\|"))
+    app.add_handler(CallbackQueryHandler(match_detail, pattern=r"^match\|"))
+
+    # Predictions
+    app.add_handler(CallbackQueryHandler(predict_from_match, pattern=r"^predict_match\|"))
+    app.add_handler(CallbackQueryHandler(quick_predict_start, pattern="^quick_predict$"))
+    app.add_handler(CallbackQueryHandler(quick_predict_manual, pattern="^qp_manual$"))
+    app.add_handler(CallbackQueryHandler(quick_predict_fmt, pattern=r"^qp_fmt\|"))
+    app.add_handler(CallbackQueryHandler(quick_predict_t1, pattern=r"^qp_t1\|"))
+    app.add_handler(CallbackQueryHandler(quick_predict_t1_page, pattern=r"^qp_t1_pg\|"))
+    app.add_handler(CallbackQueryHandler(quick_predict_t2, pattern=r"^qp_t2\|"))
+    app.add_handler(CallbackQueryHandler(quick_predict_t2_page, pattern=r"^qp_t2_pg\|"))
+
+    # Dream11
+    app.add_handler(CallbackQueryHandler(dream11_start, pattern="^dream11$"))
+    app.add_handler(CallbackQueryHandler(dream11_from_match, pattern=r"^d11_match\|"))
+    app.add_handler(CallbackQueryHandler(dream11_manual, pattern="^d11_manual$"))
+    app.add_handler(CallbackQueryHandler(dream11_fmt, pattern=r"^d11_fmt\|"))
+    app.add_handler(CallbackQueryHandler(dream11_t1, pattern=r"^d11_t1\|"))
+    app.add_handler(CallbackQueryHandler(dream11_t1_page, pattern=r"^d11_t1_pg\|"))
+    app.add_handler(CallbackQueryHandler(dream11_t2, pattern=r"^d11_t2\|"))
+    app.add_handler(CallbackQueryHandler(dream11_t2_page, pattern=r"^d11_t2_pg\|"))
+
+    # IPL Zone
+    app.add_handler(CallbackQueryHandler(ipl_zone, pattern="^ipl$"))
+    app.add_handler(CallbackQueryHandler(ipl_points_table, pattern="^ipl_table$"))
+    app.add_handler(CallbackQueryHandler(ipl_playoff_probs, pattern="^ipl_playoffs$"))
+    app.add_handler(CallbackQueryHandler(ipl_predictions, pattern="^ipl_predict$"))
+    app.add_handler(CallbackQueryHandler(ipl_team_rankings, pattern="^ipl_rankings$"))
+
+    # Player lookup
+    app.add_handler(CallbackQueryHandler(player_lookup_start, pattern="^player$"))
+    app.add_handler(CallbackQueryHandler(player_search_prompt, pattern="^pl_search$"))
+    app.add_handler(CallbackQueryHandler(player_browse_start, pattern="^pl_browse$"))
+    app.add_handler(CallbackQueryHandler(player_browse_fmt, pattern=r"^pl_fmt\|"))
+    app.add_handler(CallbackQueryHandler(player_browse_fmt_page, pattern=r"^pl_team_pg\|"))
+    app.add_handler(CallbackQueryHandler(player_browse_team, pattern=r"^pl_team\|"))
+    app.add_handler(CallbackQueryHandler(player_browse_team_page, pattern=r"^pl_profile_pg\|"))
+    app.add_handler(CallbackQueryHandler(player_profile, pattern=r"^pl_profile\|"))
+
+    # Team analysis
+    app.add_handler(CallbackQueryHandler(team_analysis_start, pattern="^team_analysis$"))
+    app.add_handler(CallbackQueryHandler(team_analysis_fmt, pattern=r"^ta_fmt\|"))
+    app.add_handler(CallbackQueryHandler(team_analysis_fmt_page, pattern=r"^ta_team_pg\|"))
+    app.add_handler(CallbackQueryHandler(team_analysis_team, pattern=r"^ta_team\|"))
+
+    # Live scores
+    app.add_handler(CallbackQueryHandler(live_scores, pattern="^live$"))
+    app.add_handler(CallbackQueryHandler(live_detail, pattern=r"^live_detail\|"))
+
+    # Leaderboards
+    app.add_handler(CallbackQueryHandler(leaderboards_menu, pattern="^leaderboard$"))
+    app.add_handler(CallbackQueryHandler(elo_rankings_start, pattern="^lb_elo$"))
+    app.add_handler(CallbackQueryHandler(elo_rankings_fmt, pattern=r"^lb_elo\|"))
+    app.add_handler(CallbackQueryHandler(top_players_start, pattern="^lb_top$"))
+    app.add_handler(CallbackQueryHandler(top_players_fmt, pattern=r"^lb_top\|"))
+
+    # Player text search (MessageHandler for text input)
+    app.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND,
+        player_search_text,
+    ))
+
+    # ── Start polling ──────────────────────────────────────────
 
     logger.info("CricketIQ bot starting...")
     app.run_polling(drop_pending_updates=True)

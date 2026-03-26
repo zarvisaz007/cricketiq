@@ -4,6 +4,8 @@ IPL Hub: points table, playoff probabilities, predictions, team rankings,
 team browser, squad viewer, player profiles, team stats/form, top players,
 season overview.
 """
+from __future__ import annotations
+
 import sys
 import os
 import asyncio

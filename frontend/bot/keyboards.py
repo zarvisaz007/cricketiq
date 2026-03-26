@@ -32,8 +32,11 @@ def back_and_home_row() -> list:
     ]
 
 
-def match_list_keyboard(matches: list, page: int = 0, prefix: str = "match") -> InlineKeyboardMarkup:
-    """Paginated upcoming match list."""
+def match_list_keyboard(matches: list, page: int = 0,
+                        prefix: str = "match") -> InlineKeyboardMarkup:
+    """Paginated upcoming match list.
+    Button labels now include day + time: "CSK vs MI · Fri 04 Apr, 19:30"
+    """
     start = page * PAGE_SIZE
     end = min(start + PAGE_SIZE, len(matches))
     rows = []
@@ -46,24 +49,32 @@ def match_list_keyboard(matches: list, page: int = 0, prefix: str = "match") -> 
         if start_time:
             try:
                 from datetime import datetime
-                dt = datetime.fromisoformat(start_time.replace("Z", "+00:00").replace("+00:00", ""))
-                date_str = f" · {dt.strftime('%b %d')}"
+                dt = datetime.fromisoformat(
+                    start_time.replace("Z", "+00:00")
+                    .replace("+00:00", ""))
+                date_str = f" · {dt.strftime('%a %d %b, %H:%M')}"
             except (ValueError, TypeError):
                 pass
 
         label = f"{team1} vs {team2}{date_str}"
-        if len(label) > 50:
-            label = f"{team1[:15]} vs {team2[:15]}{date_str}"
+        # Telegram limits button labels — truncate team names if needed
+        if len(label) > 55:
+            label = f"{team1[:12]} vs {team2[:12]}{date_str}"
+        if len(label) > 55:
+            label = label[:52] + "..."
         cid = m.get("cricbuzz_match_id", "")
-        rows.append([InlineKeyboardButton(label, callback_data=f"{prefix}|{cid}")])
+        rows.append([InlineKeyboardButton(
+            label, callback_data=f"{prefix}|{cid}")])
 
     # Pagination
     nav = []
-    total_pages = math.ceil(len(matches) / PAGE_SIZE)
+    total_pages = math.ceil(len(matches) / PAGE_SIZE) if matches else 1
     if page > 0:
-        nav.append(InlineKeyboardButton("◀ Prev", callback_data=f"upcoming_pg|{page - 1}"))
+        nav.append(InlineKeyboardButton(
+            "◀ Prev", callback_data=f"upcoming_pg|{page - 1}"))
     if page < total_pages - 1:
-        nav.append(InlineKeyboardButton("Next ▶", callback_data=f"upcoming_pg|{page + 1}"))
+        nav.append(InlineKeyboardButton(
+            "Next ▶", callback_data=f"upcoming_pg|{page + 1}"))
     if nav:
         rows.append(nav)
 
@@ -74,21 +85,69 @@ def match_list_keyboard(matches: list, page: int = 0, prefix: str = "match") -> 
 def match_action_keyboard(cricbuzz_id: str) -> InlineKeyboardMarkup:
     """Action buttons for a match detail card."""
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔮 Predict", callback_data=f"predict_match|{cricbuzz_id}"),
-         InlineKeyboardButton("🎯 Dream11", callback_data=f"d11_match|{cricbuzz_id}")],
-        [InlineKeyboardButton("📊 H2H", callback_data=f"predict_match|{cricbuzz_id}"),
-         InlineKeyboardButton("📈 Teams", callback_data=f"team_analysis")],
+        [InlineKeyboardButton(
+            "🔮 Predict", callback_data=f"predict_match|{cricbuzz_id}"),
+         InlineKeyboardButton(
+            "🎯 Dream11", callback_data=f"d11_match|{cricbuzz_id}")],
+        [InlineKeyboardButton(
+            "📊 H2H", callback_data=f"predict_match|{cricbuzz_id}"),
+         InlineKeyboardButton(
+            "📈 Teams", callback_data="team_analysis")],
         back_and_home_row(),
     ])
 
 
 def ipl_zone_keyboard() -> InlineKeyboardMarkup:
-    """IPL zone sub-menu."""
+    """IPL zone sub-menu — expanded 4-row layout."""
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 Points Table", callback_data="ipl_table"),
          InlineKeyboardButton("🎲 Playoff Odds", callback_data="ipl_playoffs")],
         [InlineKeyboardButton("🔮 IPL Predictions", callback_data="ipl_predict"),
          InlineKeyboardButton("🏅 Team Rankings", callback_data="ipl_rankings")],
+        [InlineKeyboardButton("🏏 Browse Teams", callback_data="ipl_teams"),
+         InlineKeyboardButton("⭐ Top IPL Players", callback_data="ipl_top_players")],
+        back_and_home_row(),
+    ])
+
+
+def ipl_teams_keyboard(teams: list) -> InlineKeyboardMarkup:
+    """List of IPL teams as buttons using indices (keeps callback_data short).
+
+    Parameters
+    ----------
+    teams : list
+        List of team name strings, e.g. ["Chennai Super Kings", "Mumbai Indians", ...]
+    """
+    rows = []
+    for idx, team_name in enumerate(teams):
+        label = team_name if len(team_name) <= 40 else team_name[:37] + "..."
+        # Using index keeps callback_data well under 64-byte limit
+        rows.append([InlineKeyboardButton(
+            f"🏏 {label}", callback_data=f"ipl_tm|{idx}")])
+
+    rows.append(back_and_home_row())
+    return InlineKeyboardMarkup(rows)
+
+
+def ipl_team_detail_keyboard(idx: int) -> InlineKeyboardMarkup:
+    """Detail actions for a specific IPL team.
+    Uses team index (not name) to stay under Telegram's 64-byte
+    callback_data limit.
+
+    Parameters
+    ----------
+    idx : int
+        Index of the team in the teams list.
+    """
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(
+            "📋 Squad", callback_data=f"ipl_sq|{idx}"),
+         InlineKeyboardButton(
+            "📊 Stats", callback_data=f"ipl_st|{idx}")],
+        [InlineKeyboardButton(
+            "📅 Next Match", callback_data=f"ipl_nx|{idx}"),
+         InlineKeyboardButton(
+            "🔥 Form", callback_data=f"ipl_fm|{idx}")],
         back_and_home_row(),
     ])
 
@@ -111,14 +170,17 @@ def paginated_list_keyboard(items: list, page: int, prefix: str,
 
     for i, item in enumerate(items[start:end], start=start):
         label = item if len(item) <= 45 else item[:42] + "..."
-        rows.append([InlineKeyboardButton(label, callback_data=f"{prefix}|{i}")])
+        rows.append([InlineKeyboardButton(
+            label, callback_data=f"{prefix}|{i}")])
 
     nav = []
-    total_pages = math.ceil(len(items) / per_page)
+    total_pages = math.ceil(len(items) / per_page) if items else 1
     if page > 0:
-        nav.append(InlineKeyboardButton("◀ Prev", callback_data=f"{prefix}_pg|{page - 1}"))
+        nav.append(InlineKeyboardButton(
+            "◀ Prev", callback_data=f"{prefix}_pg|{page - 1}"))
     if page < total_pages - 1:
-        nav.append(InlineKeyboardButton("Next ▶", callback_data=f"{prefix}_pg|{page + 1}"))
+        nav.append(InlineKeyboardButton(
+            "Next ▶", callback_data=f"{prefix}_pg|{page + 1}"))
     if nav:
         rows.append(nav)
 
@@ -154,7 +216,8 @@ def live_match_list_keyboard(matches: list) -> InlineKeyboardMarkup:
         if len(label) > 50:
             label = f"🔴 {t1[:15]} vs {t2[:15]}"
         cid = m.get("cricbuzz_match_id", m.get("cricbuzz_id", ""))
-        rows.append([InlineKeyboardButton(label, callback_data=f"live_detail|{cid}")])
+        rows.append([InlineKeyboardButton(
+            label, callback_data=f"live_detail|{cid}")])
 
     rows.append(back_and_home_row())
     return InlineKeyboardMarkup(rows)

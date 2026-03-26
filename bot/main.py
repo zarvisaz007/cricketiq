@@ -47,6 +47,7 @@ def run_bot():
     # Import handler modules
     from frontend.bot.handlers_menu import (
         cmd_start, main_menu_callback, help_callback, help_command, back_callback,
+        cmd_predict, cmd_upcoming, cmd_ipl, cmd_live, cmd_dream11,
     )
     from frontend.bot.handlers_upcoming import (
         upcoming_matches, upcoming_page, match_detail,
@@ -64,6 +65,9 @@ def run_bot():
     from frontend.bot.handlers_ipl import (
         ipl_zone, ipl_points_table, ipl_playoff_probs,
         ipl_predictions, ipl_team_rankings,
+        ipl_teams_list, ipl_team_detail, ipl_squad,
+        ipl_player_profile, ipl_team_stats, ipl_team_form,
+        ipl_top_players, ipl_season_overview,
     )
     from frontend.bot.handlers_player import (
         player_lookup_start, player_search_prompt, player_search_text,
@@ -83,7 +87,19 @@ def run_bot():
     # ── Build application ──────────────────────────────────────
 
     async def post_init(app):
-        """Start background pollers after bot initialization."""
+        """Set bot commands menu and start background pollers."""
+        from telegram import BotCommand
+        await app.bot.set_my_commands([
+            BotCommand("start", "Main menu"),
+            BotCommand("help", "How to use CricketIQ"),
+            BotCommand("predict", "Match prediction"),
+            BotCommand("upcoming", "Upcoming matches"),
+            BotCommand("live", "Live scores"),
+            BotCommand("ipl", "IPL Zone"),
+            BotCommand("dream11", "Dream11 team builder"),
+        ])
+        logger.info("Bot command menu registered")
+
         try:
             from scrapers.live_poller import start_poller
             start_poller()
@@ -105,6 +121,11 @@ def run_bot():
 
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("predict", cmd_predict))
+    app.add_handler(CommandHandler("upcoming", cmd_upcoming))
+    app.add_handler(CommandHandler("live", cmd_live))
+    app.add_handler(CommandHandler("ipl", cmd_ipl))
+    app.add_handler(CommandHandler("dream11", cmd_dream11))
 
     # ── Callback query handlers (pattern-matched) ──────────────
 
@@ -144,6 +165,16 @@ def run_bot():
     app.add_handler(CallbackQueryHandler(ipl_playoff_probs, pattern="^ipl_playoffs$"))
     app.add_handler(CallbackQueryHandler(ipl_predictions, pattern="^ipl_predict$"))
     app.add_handler(CallbackQueryHandler(ipl_team_rankings, pattern="^ipl_rankings$"))
+
+    # New IPL handlers
+    app.add_handler(CallbackQueryHandler(ipl_teams_list, pattern="^ipl_teams$"))
+    app.add_handler(CallbackQueryHandler(ipl_team_detail, pattern=r"^ipl_td\|"))
+    app.add_handler(CallbackQueryHandler(ipl_squad, pattern=r"^ipl_sq\|"))
+    app.add_handler(CallbackQueryHandler(ipl_player_profile, pattern=r"^ipl_pl\|"))
+    app.add_handler(CallbackQueryHandler(ipl_team_stats, pattern=r"^ipl_ts\|"))
+    app.add_handler(CallbackQueryHandler(ipl_team_form, pattern=r"^ipl_tf\|"))
+    app.add_handler(CallbackQueryHandler(ipl_top_players, pattern="^ipl_top_players$"))
+    app.add_handler(CallbackQueryHandler(ipl_season_overview, pattern="^ipl_season_overview$"))
 
     # Player lookup
     app.add_handler(CallbackQueryHandler(player_lookup_start, pattern="^player$"))

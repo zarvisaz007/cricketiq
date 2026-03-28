@@ -22,17 +22,19 @@ TG_MAX_LEN = 4096
 
 
 async def upcoming_matches(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show paginated list of upcoming matches."""
+    """Fetch and display upcoming matches directly."""
     q = update.callback_query
     await q.answer()
 
     context.user_data.setdefault("nav_stack", []).append("main_menu")
+    await q.edit_message_text("⏳ Fetching matches...")
 
     def _fetch():
         from scrapers.cricbuzz_schedule import get_upcoming_matches
         return get_upcoming_matches(days=7)
 
     matches = await asyncio.to_thread(_fetch)
+    matches = matches[:20] if matches else []
     context.user_data["upcoming_matches"] = matches
 
     if not matches:
@@ -45,7 +47,7 @@ async def upcoming_matches(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     await q.edit_message_text(
-        f"🏏 *Upcoming Matches* ({len(matches)} found)\n\nTap a match for details:",
+        "🏏 *Upcoming Matches*\n\nTap a match for details:",
         parse_mode="Markdown",
         reply_markup=match_list_keyboard(matches, page=0),
     )

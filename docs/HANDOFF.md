@@ -8,33 +8,56 @@
 ## PROJECT SNAPSHOT
 
 **What it is:**
-CricketIQ is an AI-powered cricket prediction engine with a Telegram bot frontend. 4 ML models (Elo, Logistic Regression, XGBoost, Monte Carlo), 28 features, Dream11 fantasy optimizer, IPL analytics, live Cricbuzz scores. Menu-driven bot with rich formatting, 1-tap predictions, full IPL hub.
+CricketIQ is the definitive AI-powered cricket prediction engine with a Telegram bot frontend. This is the fully consolidated, best version — merging all prior iterations into one clean project.
+
+**Stack:** Python 3.10+ | SQLite | XGBoost | scikit-learn | PuLP | python-telegram-bot | Cricbuzz scraping
 
 **Current state:** All 8 phases complete. Bot fully functional locally. Deployment pending.
 
-**Tech:** Python 3.10+ | SQLite | XGBoost | scikit-learn | PuLP | python-telegram-bot | Cricbuzz scraping
+**To start the bot:**
+```bash
+python start_bot.py
+```
 
-**Key files:**
+---
+
+## KEY FILES
 
 | File | Purpose |
 |------|---------|
-| `bot/main.py` | Bot entry — registers handlers, starts pollers |
+| `start_bot.py` | One-command bot launcher (kill old instances, check .env, start) |
+| `bot/main.py` | Bot entry — registers handlers, starts 3 pollers |
 | `frontend/bot/handlers_menu.py` | Main menu, /start, back navigation dispatch |
 | `frontend/bot/handlers_predict.py` | 4-model ensemble predictions |
 | `frontend/bot/handlers_ipl.py` | Full IPL hub (13 handlers) |
+| `frontend/bot/handlers_dream11.py` | Dream11 PuLP team builder |
+| `frontend/bot/handlers_upcoming.py` | Match browser + rich match detail reports |
+| `frontend/bot/handlers_live.py` | Live Cricbuzz scorecards with refresh |
+| `frontend/bot/handlers_player.py` | Player lookup (search + browse) |
+| `frontend/bot/handlers_team.py` | Team analysis (Elo + form + squad) |
+| `frontend/bot/handlers_leaderboard.py` | Elo rankings + top players |
 | `frontend/bot/keyboards.py` | All inline keyboard builders |
-| `frontend/bot/formatters.py` | Rich text formatters (user-friendly) |
+| `frontend/bot/formatters.py` | Rich text formatters (user-friendly, emojis) |
 | `backend/scrapers/cricbuzz_schedule.py` | Upcoming matches scraper |
 | `backend/scrapers/cricbuzz_live.py` | Live scores scraper |
+| `backend/scrapers/cricsheet.py` | Cricsheet historical data importer |
+| `backend/scrapers/espn_historical.py` | ESPN historical match scraper |
 | `backend/fantasy/team_selector.py` | Dream11 PuLP optimizer |
-| `backend/features/ipl_season.py` | IPL points table + playoff sim |
+| `backend/features/ipl_season.py` | IPL points table + playoff simulator |
+| `backend/ratings/leaderboards.py` | Leaderboard queries |
+| `backend/ratings/team_strength.py` | Team strength analytics |
 | `database/db.py` | SQLite connection + migrations |
 
-**Commands:**
+---
+
+## COMMANDS
 
 | Command | Does |
 |---------|------|
-| `make bot` | Start Telegram bot (needs TELEGRAM_BOT_TOKEN in .env) |
+| `python start_bot.py` | Start Telegram bot |
+| `python start_bot.py --kill` | Stop any running bot instance |
+| `python start_bot.py --check` | Check if bot is running |
+| `make bot` | Same as python start_bot.py |
 | `make setup` | Full pipeline: install → db → download → ingest → train |
 | `make train` | Retrain all models |
 | `make migrate` | Run all DB migrations |
@@ -42,14 +65,29 @@ CricketIQ is an AI-powered cricket prediction engine with a Telegram bot fronten
 | `make live` | Live score poller standalone |
 | `make reset` | Wipe DB and restart |
 
-**Folder map:**
+---
+
+## FOLDER MAP
+
 ```
-bot/             ← main.py entry point
-frontend/bot/    ← keyboards, formatters, 10 handler modules
-backend/         ← models, features, ratings, simulation, fantasy, scrapers
-database/        ← db.py, migrations/
-scripts/         ← orchestrator, setup_db, download_data
-docs/            ← this file + progress, memory, architecture
+cricketiq/
+├── start_bot.py          ← START HERE
+├── bot/main.py           ← bot entry point
+├── frontend/bot/         ← 10 handler modules + keyboards + formatters
+├── backend/
+│   ├── scrapers/         ← cricbuzz_live, cricbuzz_schedule, cricsheet, espn_*
+│   ├── models/           ← elo, logistic, xgboost, ensemble, ipl_predictor
+│   ├── features/         ← 28-feature registry
+│   ├── fantasy/          ← dream11 optimizer
+│   ├── impact/           ← pvor
+│   ├── ratings/          ← player_ratings, leaderboards, team_strength
+│   ├── simulation/       ← monte carlo
+│   └── nlp/              ← llm reports
+├── database/             ← db.py, migrations/, cricketiq.db
+├── models/               ← trained .pkl files
+├── scripts/              ← setup, download, retrain, backfill, update
+├── data/raw/             ← cricsheet match files
+└── docs/                 ← HANDOFF, progress, architecture, decisions
 ```
 
 ---
@@ -67,6 +105,7 @@ docs/            ← this file + progress, memory, architecture
 - [x] Phase 6: v2 core (28 features, IPL predictor, Dream11, live scraper)
 - [x] Phase 7: Bot overhaul (14 new files, modular handlers, 3 pollers)
 - [x] Phase 8: UX overhaul (persistent menu, back button, rich formatting, full IPL hub)
+- [x] Phase 9: Consolidation (merged Claude-cricket scrapers + scripts, clean start_bot.py)
 
 ### Pending
 
@@ -74,17 +113,17 @@ docs/            ← this file + progress, memory, architecture
 
 ---
 
-## NOTES FOR AGENTS
+## AGENT NOTES
 
 - Player names must match Cricsheet format (e.g. "V Kohli", "JJ Bumrah")
-- match_type must be exactly "T20", "ODI", or "Test"
+- `match_type` must be exactly `"T20"`, `"ODI"`, or `"Test"`
 - Gender filter applied everywhere — `gender='male'`
 - Callback data must stay under 64 bytes (Telegram limit)
-- Telegram 4096 char limit — use _split_message() for long responses
+- Telegram 4096 char limit — use `_split_message()` for long responses
 - Backend calls must use `asyncio.to_thread()` — never block the bot event loop
-- sys.path manipulation at top of each frontend file for backend imports
-- SQLite file: database/cricketiq.db
-- Bot token: .env as TELEGRAM_BOT_TOKEN
+- `sys.path` manipulation at top of each frontend file for backend imports
+- SQLite file: `database/cricketiq.db`
+- Bot token: `.env` as `TELEGRAM_BOT_TOKEN`
 
 ---
 
@@ -94,6 +133,8 @@ _Most recent entry first._
 
 | Date | Task | Result |
 |------|------|--------|
+| 2026-03-28 | Consolidation | Merged Claude-cricket unique scrapers (cricsheet, espn_*) and scripts (backfill, populate_real_data, update_matches) into cricketiq. Rewrote start_bot.py as clean launcher. Updated all MD files. Killed running bot. One project. |
+| 2026-03-28 | Global Filter | Built a global main-event-only filter into scrapers, removed filter selection screen from bot |
 | 2026-03-26 | UX overhaul | Persistent "/" menu, back button dispatch table, rich match reports, user-friendly formatting, full IPL hub (8 new handlers), cross-agent consistency fixes |
 | 2026-03-26 | Bot overhaul | 14 new files: keyboards, formatters, 10 handler modules. Modular architecture. 3 background pollers. 7 commands + 30+ callback handlers |
 | 2026-03-21 | Telegram bot v1 | 7 ConversationHandlers, inline keyboards, asyncio.to_thread for blocking calls |
@@ -106,4 +147,4 @@ _Most recent entry first._
 
 ## Last Updated
 
-2026-03-26
+2026-03-28 — Phase 9 complete. Fully consolidated. One project, one launcher.

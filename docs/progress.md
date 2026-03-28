@@ -109,6 +109,21 @@ Format: [x] = done, [ ] = pending, [~] = in progress
 - [x] User-friendly formatting (emojis, plain English, visual bars, no technical jargon)
 - [x] Full IPL hub (8 new handlers: teams, squads, player profiles, stats, form, top players, season overview)
 - [x] Cross-agent consistency fixes (callback patterns, nav routes)
+- [x] Global Match Filter applied (shows only main events)
+- [x] Strict Match Filter (only IPL, World Cup, T20 World Cup, The Ashes)
+
+---
+
+## Phase 9: Consolidation
+
+- [x] Killed running bot processes
+- [x] Copied unique scrapers from Claude-cricket → backend/scrapers/ (cricsheet, espn_historical, espn_player_profile, espn_scorecard)
+- [x] Copied unique scripts → scripts/ (backfill_espn, populate_real_data, update_matches)
+- [x] Copied analytics modules → backend/ratings/ (leaderboards, team_strength)
+- [x] Rewrote start_bot.py as clean one-command launcher (--kill, --check flags)
+- [x] Updated README.md — complete project reference
+- [x] Updated docs/HANDOFF.md — Phase 9 logged
+- [x] One folder, one project, one launcher
 
 ---
 
@@ -120,4 +135,4 @@ Format: [x] = done, [ ] = pending, [~] = in progress
 
 ## Last Updated
 
-2026-03-26 — All 8 phases complete. Bot overhaul done. Deployment pending.
+2026-03-28 — Phase 9 complete. Fully consolidated. All prior cricket projects merged into cricketiq.

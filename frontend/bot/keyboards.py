@@ -32,6 +32,9 @@ def back_and_home_row() -> list:
     ]
 
 
+
+
+
 def match_list_keyboard(matches: list, page: int = 0,
                         prefix: str = "match") -> InlineKeyboardMarkup:
     """Paginated upcoming match list.
@@ -45,21 +48,27 @@ def match_list_keyboard(matches: list, page: int = 0,
         team1 = m.get("team1", "?")
         team2 = m.get("team2", "?")
         start_time = m.get("start_time", "")
-        date_str = ""
+        match_type = m.get("match_type", "")
+
+        # Build suffix: "dd/mm/yy · IPL"
+        suffix_parts = []
         if start_time:
             try:
                 from datetime import datetime
                 dt = datetime.fromisoformat(
                     start_time.replace("Z", "+00:00")
                     .replace("+00:00", ""))
-                date_str = f" · {dt.strftime('%a %d %b, %H:%M')}"
+                suffix_parts.append(dt.strftime("%d/%m/%y"))
             except (ValueError, TypeError):
                 pass
+        if match_type:
+            suffix_parts.append(match_type)
+        suffix = f" · {' · '.join(suffix_parts)}" if suffix_parts else ""
 
-        label = f"{team1} vs {team2}{date_str}"
+        label = f"{team1} vs {team2}{suffix}"
         # Telegram limits button labels — truncate team names if needed
         if len(label) > 55:
-            label = f"{team1[:12]} vs {team2[:12]}{date_str}"
+            label = f"{team1[:12]} vs {team2[:12]}{suffix}"
         if len(label) > 55:
             label = label[:52] + "..."
         cid = m.get("cricbuzz_match_id", "")

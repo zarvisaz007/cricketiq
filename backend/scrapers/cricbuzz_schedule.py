@@ -14,8 +14,45 @@ for _p in [_root, os.path.join(_root, "backend")]:
         sys.path.insert(0, _p)
 
 from scrapers.http_client import get_page
-from scrapers.cricbuzz_live import _parse_teams_from_slug, _detect_match_type
+from scrapers.cricbuzz_live import _parse_teams_from_slug
 from database.db import get_connection
+
+
+# Map slug keywords to user-friendly series labels
+SERIES_LABELS = {
+    "ipl": "IPL",
+    "indian-premier-league": "IPL",
+    "pakistan-super-league": "PSL",
+    "psl": "PSL",
+    "big-bash": "BBL",
+    "bbl": "BBL",
+    "cpl": "CPL",
+    "caribbean-premier-league": "CPL",
+    "sa20": "SA20",
+    "the-hundred": "The 100",
+    "legends-league": "LLC",
+    "plunket-shield": "Test",
+    "sheffield-shield": "Test",
+    "ranji": "Test",
+    "test": "Test",
+    "odi": "ODI",
+    "one-day": "ODI",
+    "t20i": "T20I",
+    "t20-world-cup": "T20 WC",
+    "world-cup": "WC",
+    "asia-cup": "Asia Cup",
+    "champions-trophy": "CT",
+}
+
+
+def _detect_series_label(slug: str) -> str:
+    """Detect a user-friendly series/format label from the URL slug."""
+    slug_lower = slug.lower()
+    for keyword, label in SERIES_LABELS.items():
+        if keyword in slug_lower:
+            return label
+    # Fallback: generic T20
+    return "T20"
 
 SCHEDULE_URLS = [
     "https://www.cricbuzz.com/cricket-schedule/upcoming-series/international",
@@ -24,6 +61,7 @@ SCHEDULE_URLS = [
 
 # Alias mapping for team name normalization
 TEAM_ALIASES = {
+    # IPL
     "Royal Challengers Bengaluru": "Royal Challengers Bangalore",
     "Kings Xi Punjab": "Punjab Kings",
     "Delhi Daredevils": "Delhi Capitals",
@@ -39,12 +77,95 @@ TEAM_ALIASES = {
     "Pbks": "Punjab Kings",
     "Lsg": "Lucknow Super Giants",
     "Gt": "Gujarat Titans",
+    # International
+    "Rsa": "South Africa",
+    "Nz": "New Zealand",
+    "Aus": "Australia",
+    "Ind": "India",
+    "Eng": "England",
+    "Pak": "Pakistan",
+    "Sl": "Sri Lanka",
+    "Ban": "Bangladesh",
+    "Wi": "West Indies",
+    "Afg": "Afghanistan",
+    "Ire": "Ireland",
+    "Zim": "Zimbabwe",
+    "Sco": "Scotland",
+    "Npl": "Nepal",
+    "Oman": "Oman",
+    "Usa": "USA",
+    "Ned": "Netherlands",
+    "Uae": "UAE",
+    "Nam": "Namibia",
+    # International Women
+    "Rsaw": "SA Women",
+    "Nzw": "NZ Women",
+    "Ausw": "AUS Women",
+    "Indw": "IND Women",
+    "Engw": "ENG Women",
+    "Wiw": "WI Women",
+    # PSL
+    "Lhq": "Lahore Qalandars",
+    "Hydk": "Hyderabad Kings",
+    "Islu": "Islamabad United",
+    "Kk": "Karachi Kings",
+    "Ms": "Multan Sultans",
+    "Pz": "Peshawar Zalmi",
+    "Qg": "Quetta Gladiators",
+    # NZ domestic
+    "Akl": "Auckland",
+    "Cntbry": "Canterbury",
+    "Cd": "Central Districts",
+    "Nd": "Northern Districts",
+    "Otg": "Otago",
+    "Wel": "Wellington",
+    # SA domestic
+    "Tit": "Titans",
+    "Lions": "Lions",
+    "Dol": "Dolphins",
+    "Kng": "Knights",
+    "War": "Warriors",
+    "Cri": "Cape Cobras",
+    "Bor": "Boland",
+    "Kznin": "KZN Inland",
+    "Nwest": "North West",
+    "Sla": "SWD",
+    "Wpr": "Western Province",
+    "Ngaw": "Northerns",
+    # AU domestic
+    "Saus": "South Australia",
+    "Vic": "Victoria",
+    "Nza": "NZ A",
+    # Legends / Other
+    "Indt": "India Legends",
+    "Knso": "Kings",
+    "Rrp": "Rajputs",
+    "Snss": "Senses",
+    # African teams
+    "Gh": "Ghana",
+    "Shn": "St Helena",
+    "Sey": "Seychelles",
+    "Tan": "Tanzania",
+    "Mwi": "Malawi",
+    "Swt": "Eswatini",
+    "Rwaw": "Rwanda Women",
+    "Ghw": "Ghana Women",
+    "Rsawu19": "SA Women U19",
+    "Zimwu19": "ZIM Women U19",
 }
 
 
 def _normalize_team(name: str) -> str:
-    """Normalize team name using alias mapping."""
+    """Normalize team name using alias mapping. Strip match descriptors."""
     name = name.strip()
+    # Remove common suffixes that leak from slugs (e.g. "Vic Final Sheffield Shield")
+    for suffix in [
+        " Semi Final", " Final ", " Qualifier ", " Division ",
+        " Provincial ", " Sheffield ", " Plunket ", " Ranji ",
+    ]:
+        idx = name.find(suffix)
+        if idx > 0:
+            name = name[:idx].strip()
     return TEAM_ALIASES.get(name, name)
 
 
@@ -80,7 +201,7 @@ def scrape_upcoming_matches() -> list:
 
             team1 = _normalize_team(teams[0])
             team2 = _normalize_team(teams[1])
-            match_type = _detect_match_type(slug)
+            match_type = _detect_series_label(slug)
 
             matches.append({
                 "cricbuzz_match_id": match_id,
@@ -107,7 +228,7 @@ def scrape_upcoming_matches() -> list:
 
             team1 = _normalize_team(teams[0])
             team2 = _normalize_team(teams[1])
-            match_type = _detect_match_type(slug)
+            match_type = _detect_series_label(slug)
 
             matches.append({
                 "cricbuzz_match_id": match_id,
@@ -234,7 +355,36 @@ def store_upcoming_matches(matches: list):
     print(f"[Schedule] Stored/updated {len(matches)} upcoming matches")
 
 
-def get_upcoming_matches(days: int = 7, match_type: str = None) -> list:
+# ── Main-event filter ─────────────────────────────────────────
+
+WHITELIST_TEAMS = {
+    "india", "australia", "england", "pakistan", "south africa",
+    "new zealand", "sri lanka", "bangladesh", "west indies",
+    "afghanistan", "ireland", "zimbabwe", "netherlands", "italy", "usa",
+    "united states of america",
+    "chennai super kings", "delhi capitals", "gujarat titans",
+    "kolkata knight riders", "lucknow super giants", "mumbai indians",
+    "punjab kings", "rajasthan royals", "royal challengers bengaluru",
+    "royal challengers bangalore", "sunrisers hyderabad",
+    # Common abbreviations/acronyms
+    "csk", "dc", "gt", "kkr", "lsg", "mi", "pbks", "rr", "rcb", "srh",
+    "ind", "aus", "eng", "pak", "rsa", "sa", "nz", "sl", "ban", "wi", "afg", "ire", "zim", "ned", "ita"
+}
+
+def is_main_event(match: dict) -> bool:
+    """Strict filter: only extremely specific whitelisted teams are permitted."""
+    t1 = (match.get("team1") or match.get("team_a") or "").lower()
+    t2 = (match.get("team2") or match.get("team_b") or "").lower()
+
+    # Exclude women's and U19 matches
+    if "women" in t1 or "u19" in t1 or "women" in t2 or "u19" in t2:
+        return False
+
+    return t1 in WHITELIST_TEAMS and t2 in WHITELIST_TEAMS
+
+
+def get_upcoming_matches(days: int = 7, match_type: str = None,
+                         main_only: bool = True) -> list:
     """Query DB for upcoming matches."""
     conn = get_connection()
     query = "SELECT * FROM upcoming_matches WHERE status = 'upcoming'"
@@ -263,6 +413,9 @@ def get_upcoming_matches(days: int = 7, match_type: str = None) -> list:
             except (json.JSONDecodeError, TypeError):
                 d["playing_xi_team2"] = []
         result.append(d)
+
+    if main_only:
+        result = [m for m in result if is_main_event(m)]
 
     return result
 

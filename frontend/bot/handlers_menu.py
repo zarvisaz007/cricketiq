@@ -236,6 +236,7 @@ async def cmd_upcoming(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return get_upcoming_matches(days=7)
 
     matches = await asyncio.to_thread(_fetch)
+    matches = matches[:20] if matches else []
     context.user_data["upcoming_matches"] = matches
 
     if not matches:
@@ -248,7 +249,7 @@ async def cmd_upcoming(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     await update.message.reply_text(
-        f"🏏 *Upcoming Matches* ({len(matches)} found)\n\nTap a match for details:",
+        "🏏 *Upcoming Matches*\n\nTap a match for details:",
         parse_mode="Markdown",
         reply_markup=match_list_keyboard(matches, page=0),
     )

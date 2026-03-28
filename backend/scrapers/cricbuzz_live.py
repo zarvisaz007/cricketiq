@@ -19,7 +19,7 @@ CRICBUZZ_SCORECARD_API = "https://www.cricbuzz.com/api/html/cricket-scorecard/{m
 CRICBUZZ_COMMENTARY_API = "https://www.cricbuzz.com/api/cricket-match/{match_id}/full-commentary/1"
 
 
-def get_live_matches() -> list:
+def get_live_matches(main_only: bool = True) -> list:
     """
     Scrape Cricbuzz live scores page for active match IDs.
     Returns list of dicts: {cricbuzz_id, team_a, team_b, match_type, status}
@@ -57,6 +57,10 @@ def get_live_matches() -> list:
             "status": "live",
             "slug": slug,
         })
+
+    if main_only:
+        from scrapers.cricbuzz_schedule import is_main_event
+        matches = [m for m in matches if is_main_event(m)]
 
     return matches
 
